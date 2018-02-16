@@ -28,15 +28,7 @@ def main():
     indices_to_colors_map, colors_to_indices_map, void_color = net.utilities.get_colors_info(
         len(net.config.categories))
 
-    print("colors_to_indices_map")
-    pprint.pprint(indices_to_colors_map)
-
-    print("Void color: {}".format(void_color))
-
     for index in tqdm.tqdm(range(10)):
-
-        message = "Image index: {}".format(index)
-        print(message)
 
         images, segmentations = next(generator)
 
@@ -50,15 +42,13 @@ def main():
 
                 inverted_color = color[::-1]
 
-                print("Searching for color: {}".format(np.array(inverted_color)))
-
-                if np.all(inverted_color == void_color):
+                if inverted_color == void_color:
 
                     categories.append("void")
 
                 else:
 
-                    index = colors_to_indices_map[tuple(np.array(inverted_color))]
+                    index = colors_to_indices_map[inverted_color]
                     categories.append(net.config.categories[index])
 
             logger.info(vlogging.VisualRecord("Data", [image, segmentation], footnotes=categories))

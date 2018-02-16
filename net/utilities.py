@@ -58,10 +58,10 @@ def get_colors_info(categories_count):
 
         colors_matrix[color_index] = r, g, b
 
-    indices_to_colors_map = {color_index: colors_matrix[color_index] for color_index in range(categories_count)}
-    colors_to_indices_map = {tuple(value): key for key, value in indices_to_colors_map.items()}
+    indices_to_colors_map = {color_index: tuple(colors_matrix[color_index]) for color_index in range(categories_count)}
+    colors_to_indices_map = {color: index for index, color in indices_to_colors_map.items()}
 
-    return indices_to_colors_map, colors_to_indices_map, colors_matrix[-1]
+    return indices_to_colors_map, colors_to_indices_map, tuple(colors_matrix[-1])
 
 
 def get_image_colors(image):
