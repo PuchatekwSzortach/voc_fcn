@@ -26,11 +26,15 @@ def get_logger(path):
     return logger
 
 
-def get_colors_map():
+def get_colors_info(categories_count):
     """
-    Colormap used to denote VOC segmentations.
+    Returns two dictionaries and a 3-element tuple.
+     First dictionary maps VOC categories indices to colors in VOC segmentation images
+     Second dictionary maps segmentation colors to categories
+     3-element tuple represents color of void - that is ambiguous regions
     Code adapted from https://gist.github.com/wllhf/a4533e0adebe57e3ed06d4b50c8419ae
-    :return: colors array
+    :param categories_count: number of categories - includes background, but doesn't include void
+    :return: map, map, tuple
     """
 
     colors_count = 256
@@ -38,7 +42,7 @@ def get_colors_map():
     def bitget(byteval, idx):
         return ((byteval & (1 << idx)) != 0)
 
-    colors_map = np.zeros((colors_count, 3), dtype=np.uint8)
+    colors_matrix = np.zeros(shape=(colors_count, 3), dtype=np.int)
 
     for color_index in range(colors_count):
 
@@ -52,6 +56,28 @@ def get_colors_map():
             b = b | (bitget(c, 2) << 7 - j)
             c = c >> 3
 
-        colors_map[color_index] = np.array([r, g, b])
+        colors_matrix[color_index] = r, g, b
 
-    return colors_map
+    indices_to_colors_map = {color_index: colors_matrix[color_index] for color_index in range(categories_count)}
+    colors_to_indices_map = {tuple(value): key for key, value in indices_to_colors_map.items()}
+
+    return indices_to_colors_map, colors_to_indices_map, colors_matrix[-1]
+
+
+def get_image_colors(image):
+    """
+    Given an image, returns a list of colors found in the image
+    :param image: 3D numpy array
+    :return: list of 3 element tuples
+    """
+
+    colors_set = set()
+
+    for y in range(image.shape[0]):
+
+        for x in range(image.shape[1]):
+
+            color = image[y][x]
+            colors_set.add(tuple(color))
+
+    return list(colors_set)
