@@ -51,13 +51,23 @@ class BatchesGeneratorFactory:
         images_paths = glob.glob(os.path.join(data_directory, "JPEGImages/**.jpg"))
         segmentation_paths = glob.glob(os.path.join(data_directory, "SegmentationClass/**.png"))
 
+        file_name_to_image_path_map = {}
+
+        # Get a dictionary mapping file names to full images pathes
+        for image_path in images_paths:
+
+            file_name_with_extension = os.path.basename(image_path)
+            file_name = os.path.splitext(file_name_with_extension)[0]
+            file_name_to_image_path_map[file_name] = image_path
+
         data_map = {}
 
+        # Now prepare a dictionary mapping segmentation paths to corresponding images paths
         for segmentation_path in segmentation_paths:
+
             file_name_with_extension = os.path.basename(segmentation_path)
             file_name = os.path.splitext(file_name_with_extension)[0]
-
-            image_path = [path for path in images_paths if file_name in path][0]
+            image_path = file_name_to_image_path_map[file_name]
 
             data_map[file_name] = (image_path, segmentation_path)
 
