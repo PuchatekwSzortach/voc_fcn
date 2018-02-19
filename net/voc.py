@@ -79,7 +79,8 @@ def get_colors_info(categories_count):
     Returns two dictionaries and a 3-element tuple.
      First dictionary maps VOC categories indices to colors in VOC segmentation images
      Second dictionary maps segmentation colors to categories
-     3-element tuple represents color of void - that is ambiguous regions
+     3-element tuple represents color of void - that is ambiguous regions.
+     All colors are returned in BGR order.
     Code adapted from https://gist.github.com/wllhf/a4533e0adebe57e3ed06d4b50c8419ae
     :param categories_count: number of categories - includes background, but doesn't include void
     :return: map, map, tuple
@@ -104,7 +105,8 @@ def get_colors_info(categories_count):
             b = b | (bitget(c, 2) << 7 - j)
             c = c >> 3
 
-        colors_matrix[color_index] = r, g, b
+        # Writing colors in BGR order, since our image reading and logging routines use it
+        colors_matrix[color_index] = b, g, r
 
     indices_to_colors_map = {color_index: tuple(colors_matrix[color_index]) for color_index in range(categories_count)}
     colors_to_indices_map = {color: index for index, color in indices_to_colors_map.items()}
@@ -121,3 +123,15 @@ def get_void_mask(segmentation_image, void_color):
     """
 
     return np.all(segmentation_image == void_color, axis=-1).astype(np.int32)
+
+
+# def get_segmentation_cube(segmentation_image, colors_to_indices_map):
+#     """
+#     Turns 2D 3-channel segmentation image with into a batch of 2D binary maps - one for each
+#     segmentation category
+#     :param segmentation_image: 2D 3-channnel segmentation image
+#     :param colors_to_indices_map: map mapping image colors to categories indices
+#     :return: 3D array with a binary 2D map for each category at a corresponding index
+#     """
+#
+#     return None

@@ -27,7 +27,7 @@ def main():
 
         for image, segmentation in zip(images, segmentations):
 
-            void_mask = net.voc.get_void_mask(segmentation, void_color[::-1])
+            void_mask = net.voc.get_void_mask(segmentation, void_color)
 
             segmentation_colors = net.utilities.get_image_colors(segmentation)
 
@@ -35,7 +35,7 @@ def main():
 
             for color in segmentation_colors:
 
-                inverted_color = color[::-1]
+                inverted_color = color
 
                 if inverted_color == void_color:
 
