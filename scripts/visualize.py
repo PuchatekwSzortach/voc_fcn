@@ -2,15 +2,8 @@
 Module for visualization of data generators outputs, model prediction, etc
 """
 
-import glob
-import os
-import random
-import collections
-import pprint
-
 import vlogging
 import cv2
-import xmltodict
 import tqdm
 import numpy as np
 
@@ -25,7 +18,7 @@ def main():
 
     generator = net.voc.BatchesGeneratorFactory(net.config.data_directory).get_generator(batch_size=1)
 
-    indices_to_colors_map, colors_to_indices_map, void_color = net.utilities.get_colors_info(
+    indices_to_colors_map, colors_to_indices_map, void_color = net.voc.get_colors_info(
         len(net.config.categories))
 
     for index in tqdm.tqdm(range(10)):
