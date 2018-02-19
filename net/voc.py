@@ -110,3 +110,14 @@ def get_colors_info(categories_count):
     colors_to_indices_map = {color: index for index, color in indices_to_colors_map.items()}
 
     return indices_to_colors_map, colors_to_indices_map, tuple(colors_matrix[-1])
+
+
+def get_void_mask(segmentation_image, void_color):
+    """
+    Compute a 2D void segmentation given segmentation image and void_color
+    :param segmentation_image: numpy array, 3-channel segmentation image
+    :param void_color: 3-element tuple representing void color
+    :return: 2D binary array with 1 at void color location and 0 elsewhere
+    """
+
+    return np.all(segmentation_image == void_color, axis=-1).astype(np.int32)

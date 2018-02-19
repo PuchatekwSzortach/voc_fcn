@@ -21,11 +21,13 @@ def main():
     indices_to_colors_map, colors_to_indices_map, void_color = net.voc.get_colors_info(
         len(net.config.categories))
 
-    for index in tqdm.tqdm(range(10)):
+    for _ in tqdm.tqdm(range(10)):
 
         images, segmentations = next(generator)
 
         for image, segmentation in zip(images, segmentations):
+
+            void_mask = net.voc.get_void_mask(segmentation, void_color[::-1])
 
             segmentation_colors = net.utilities.get_image_colors(segmentation)
 
@@ -44,7 +46,7 @@ def main():
                     index = colors_to_indices_map[inverted_color]
                     categories.append(net.config.categories[index])
 
-            logger.info(vlogging.VisualRecord("Data", [image, segmentation], footnotes=categories))
+            logger.info(vlogging.VisualRecord("Data", [image, segmentation, 255 * void_mask], footnotes=categories))
 
 
 if __name__ == "__main__":
