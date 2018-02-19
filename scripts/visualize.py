@@ -6,6 +6,7 @@ import vlogging
 import cv2
 import tqdm
 import numpy as np
+import pprint
 
 import net.config
 import net.utilities
@@ -25,28 +26,25 @@ def main():
 
         images, segmentations = next(generator)
 
-        for image, segmentation in zip(images, segmentations):
+        for image, segmentation_image in zip(images, segmentations):
 
-            void_mask = net.voc.get_void_mask(segmentation, void_color)
+            void_mask = net.voc.get_void_mask(segmentation_image, void_color)
+            segmentation_cube = net.voc.get_segmentation_cube(segmentation_image, indices_to_colors_map)
 
-            segmentation_colors = net.utilities.get_image_colors(segmentation)
+            categories = ["void"]
+            segmentation_layers = []
 
-            categories = []
+            for index in range(segmentation_cube.shape[-1]):
 
-            for color in segmentation_colors:
+                segmentation_layer = segmentation_cube[:, :, index]
 
-                inverted_color = color
+                if np.any(segmentation_layer):
 
-                if inverted_color == void_color:
-
-                    categories.append("void")
-
-                else:
-
-                    index = colors_to_indices_map[inverted_color]
                     categories.append(net.config.categories[index])
+                    segmentation_layers.append(255 * segmentation_layer)
 
-            logger.info(vlogging.VisualRecord("Data", [image, segmentation, 255 * void_mask], footnotes=categories))
+            images_to_display = [image, segmentation_image, 255 * void_mask] + segmentation_layers
+            logger.info(vlogging.VisualRecord("Data", images_to_display, footnotes=categories))
 
 
 if __name__ == "__main__":

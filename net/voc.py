@@ -125,13 +125,23 @@ def get_void_mask(segmentation_image, void_color):
     return np.all(segmentation_image == void_color, axis=-1).astype(np.int32)
 
 
-# def get_segmentation_cube(segmentation_image, colors_to_indices_map):
-#     """
-#     Turns 2D 3-channel segmentation image with into a batch of 2D binary maps - one for each
-#     segmentation category
-#     :param segmentation_image: 2D 3-channnel segmentation image
-#     :param colors_to_indices_map: map mapping image colors to categories indices
-#     :return: 3D array with a binary 2D map for each category at a corresponding index
-#     """
-#
-#     return None
+def get_segmentation_cube(segmentation_image, indices_to_colors_map):
+    """
+    Turns 2D 3-channel segmentation image with into a batch of 2D binary maps - one for each
+    segmentation category
+    :param segmentation_image: 2D 3-channnel segmentation image
+    :param indices_to_colors_map: dictionary mapping categories indices to image colors
+    :return: 3D array with a binary 2D map for each category at a corresponding index
+    """
+
+    categories_count = len(indices_to_colors_map.keys())
+
+    shape = segmentation_image.shape[:2] + (categories_count,)
+    segmentation_cube = np.zeros(shape, dtype=np.int32)
+
+    for index, color in indices_to_colors_map.items():
+
+        segmentation_mask = np.all(segmentation_image == color, axis=-1)
+        segmentation_cube[:, :, index] = segmentation_mask
+
+    return segmentation_cube
