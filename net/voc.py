@@ -6,18 +6,26 @@ import glob
 import os
 import random
 
-import cv2
 import sklearn.utils
 import numpy as np
+import cv2
 
 
 class BatchesGeneratorFactory:
+    """
+    Factory class creating data batches generators
+    """
 
     def __init__(self, data_directory):
 
         self.data_directory = data_directory
 
     def get_generator(self, batch_size):
+        """
+        Get generator that outputs batch_size batches on each yield
+        :param batch_size: Desired batch sizes
+        :return: data batches generator
+        """
 
         data_map = self._get_data_map(self.data_directory)
         keys = list(data_map.keys())
@@ -46,7 +54,8 @@ class BatchesGeneratorFactory:
                     images.clear()
                     segmentations.clear()
 
-    def _get_data_map(self, data_directory):
+    @staticmethod
+    def _get_data_map(data_directory):
 
         images_paths = glob.glob(os.path.join(data_directory, "JPEGImages/**.jpg"))
         segmentation_paths = glob.glob(os.path.join(data_directory, "SegmentationClass/**.png"))
@@ -88,25 +97,31 @@ def get_colors_info(categories_count):
 
     colors_count = 256
 
-    def bitget(byteval, idx):
-        return ((byteval & (1 << idx)) != 0)
+    def bitget(byte_value, idx):
+        """
+        Check if bit at given byte index is set
+        :param byte_value: byte
+        :param idx: index
+        :return: bool
+        """
+        return (byte_value & (1 << idx)) != 0
 
     colors_matrix = np.zeros(shape=(colors_count, 3), dtype=np.int)
 
     for color_index in range(colors_count):
 
-        r = g = b = 0
-        c = color_index
+        red = green = blue = 0
+        color = color_index
 
         for j in range(8):
 
-            r = r | (bitget(c, 0) << 7 - j)
-            g = g | (bitget(c, 1) << 7 - j)
-            b = b | (bitget(c, 2) << 7 - j)
-            c = c >> 3
+            red = red | (bitget(color, 0) << 7 - j)
+            green = green | (bitget(color, 1) << 7 - j)
+            blue = blue | (bitget(color, 2) << 7 - j)
+            color = color >> 3
 
         # Writing colors in BGR order, since our image reading and logging routines use it
-        colors_matrix[color_index] = b, g, r
+        colors_matrix[color_index] = blue, green, red
 
     indices_to_colors_map = {color_index: tuple(colors_matrix[color_index]) for color_index in range(categories_count)}
     colors_to_indices_map = {color: index for index, color in indices_to_colors_map.items()}

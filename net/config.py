@@ -2,9 +2,9 @@
 Module with configuration data
 """
 
-data_directory = "../../data/VOC2012"
+DATA_DIRECTORY = "../../data/VOC2012"
 
-categories = [
+CATEGORIES = [
     'background',
     'aeroplane',
     'bicycle',
@@ -28,4 +28,4 @@ categories = [
     'tvmonitor']
 
 
-ids_to_categories_map = {id: category for id, category in enumerate(categories)}
+IDS_TO_CATEGORIES_MAP = {id: category for id, category in enumerate(CATEGORIES)}

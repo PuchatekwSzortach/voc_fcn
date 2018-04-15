@@ -8,6 +8,9 @@ import net.voc
 
 
 def test_get_void_mask():
+    """
+    Test function computing void mask (pixels for which segmentation is undefined)
+    """
 
     segmentation_image = np.zeros((10, 10, 3), dtype=np.int32)
 
@@ -25,6 +28,10 @@ def test_get_void_mask():
 
 
 def test_get_segmentation_cube():
+    """
+    Test function splitting segmentations into 2D map for each segmentation - thus giving a 3D segmentation volume
+    :return:
+    """
 
     segmentation_image = np.zeros((10, 10, 3), dtype=np.int32)
 
