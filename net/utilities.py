@@ -41,3 +41,22 @@ def get_image_colors(image):
 def get_ids_to_values_map(values):
 
     return {id: category for id, category in enumerate(values)}
+
+
+def get_target_image_size(image_size, size_factor):
+    """
+    Given an image_size tuple and size_factor, return a new image_size tuple that is a multiple of size_factor and
+    as close to original image_size as possible
+    :param image_size: tuple of two integers
+    :param size_factor: integer
+    :return: tuple of two integers
+    """
+
+    target_sizes = []
+
+    for size in image_size:
+
+        target_size = size_factor * (size // size_factor)
+        target_sizes.append(target_size)
+
+    return tuple(target_sizes)

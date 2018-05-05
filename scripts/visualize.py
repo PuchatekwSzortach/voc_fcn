@@ -34,11 +34,15 @@ def log_batch(logger, images, segmentations, categories, indices_to_colors_map, 
             segmentation_layer = segmentation_cube[:, :, index]
 
             if np.any(segmentation_layer):
+
                 batch_categories.append(ids_to_categories_map[index])
                 segmentation_layers.append(255 * segmentation_layer)
 
+        shapes = image.shape, segmentation_cube.shape
+        footnotes = "{}\n{}".format(batch_categories, shapes)
+
         images_to_display = [image, segmentation_image, 255 * void_mask] + segmentation_layers
-        logger.info(vlogging.VisualRecord("Data", images_to_display, footnotes=batch_categories))
+        logger.info(vlogging.VisualRecord("Data", images_to_display, footnotes=footnotes))
 
 
 def main():
@@ -57,7 +61,10 @@ def main():
     logger = net.utilities.get_logger(config["log_path"])
     categories = config["categories"]
 
-    generator = net.voc.BatchesGeneratorFactory(config["data_directory"]).get_generator(batch_size=1)
+    indices_to_colors_map, _, void_color = net.voc.get_colors_info(len(categories))
+
+    generator_factory = net.voc.BatchesGeneratorFactory(config["data_directory"])
+    generator = generator_factory.get_generator(config["size_factor"], config["batch_size"])
 
     indices_to_colors_map, _, void_color = net.voc.get_colors_info(len(categories))
 

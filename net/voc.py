@@ -10,6 +10,8 @@ import sklearn.utils
 import numpy as np
 import cv2
 
+import net.utilities
+
 
 class BatchesGeneratorFactory:
     """
@@ -18,31 +20,36 @@ class BatchesGeneratorFactory:
 
     def __init__(self, data_directory):
 
-        self.data_directory = data_directory
+        self.images_paths_to_segmentation_paths_map = self._get_images_paths_to_segmentations_paths_map(data_directory)
 
-    def get_generator(self, batch_size):
+    def get_generator(self, size_factor, batch_size):
         """
         Get generator that outputs batch_size batches on each yield
         :param batch_size: Desired batch sizes
         :return: data batches generator
         """
 
-        data_map = self._get_data_map(self.data_directory)
-        keys = list(data_map.keys())
+        images_paths = list(self.images_paths_to_segmentation_paths_map.keys())
 
         images = []
         segmentations = []
 
         while True:
 
-            random.shuffle(keys)
+            random.shuffle(images_paths)
 
-            for key in keys:
+            for key in images_paths:
 
-                image_path, segmentation_path = data_map[key]
+                image_path, segmentation_path = self.images_paths_to_segmentation_paths_map[key]
 
                 image = cv2.imread(image_path)
                 segmentation = cv2.imread(segmentation_path)
+
+                target_size = net.utilities.get_target_image_size(image.shape[:2], size_factor)
+                target_size = target_size[1], target_size[0]
+
+                image = cv2.resize(image, target_size, interpolation=cv2.INTER_CUBIC)
+                segmentation = cv2.resize(segmentation, target_size, interpolation=cv2.INTER_NEAREST)
 
                 images.append(image)
                 segmentations.append(segmentation)
@@ -54,15 +61,18 @@ class BatchesGeneratorFactory:
                     images.clear()
                     segmentations.clear()
 
+    def get_size(self):
+        return len(self.images_paths_to_segmentation_paths_map.keys())
+
     @staticmethod
-    def _get_data_map(data_directory):
+    def _get_images_paths_to_segmentations_paths_map(data_directory):
 
         images_paths = glob.glob(os.path.join(data_directory, "JPEGImages/**.jpg"))
         segmentation_paths = glob.glob(os.path.join(data_directory, "SegmentationClass/**.png"))
 
         file_name_to_image_path_map = {}
 
-        # Get a dictionary mapping file names to full images pathes
+        # Get a dictionary mapping file names to full images paths
         for image_path in images_paths:
 
             file_name_with_extension = os.path.basename(image_path)
