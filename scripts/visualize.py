@@ -2,26 +2,31 @@
 Module for visualization of data generators outputs, model prediction, etc
 """
 
+import argparse
+import sys
+
+import yaml
 import vlogging
 import tqdm
 import numpy as np
 
-import net.config
 import net.utilities
 import net.voc
 
 
-def log_batch(logger, images, segmentations, indices_to_colors_map, void_color):
+def log_batch(logger, images, segmentations, categories, indices_to_colors_map, void_color):
     """
     Log single batch of images and segmentation masks
     """
+
+    ids_to_categories_map = net.utilities.get_ids_to_values_map(categories)
 
     for image, segmentation_image in zip(images, segmentations):
 
         void_mask = net.voc.get_void_mask(segmentation_image, void_color)
         segmentation_cube = net.voc.get_segmentation_cube(segmentation_image, indices_to_colors_map)
 
-        categories = ["void"]
+        batch_categories = ["void"]
         segmentation_layers = []
 
         for index in range(segmentation_cube.shape[-1]):
@@ -29,11 +34,11 @@ def log_batch(logger, images, segmentations, indices_to_colors_map, void_color):
             segmentation_layer = segmentation_cube[:, :, index]
 
             if np.any(segmentation_layer):
-                categories.append(net.config.CATEGORIES[index])
+                batch_categories.append(ids_to_categories_map[index])
                 segmentation_layers.append(255 * segmentation_layer)
 
         images_to_display = [image, segmentation_image, 255 * void_mask] + segmentation_layers
-        logger.info(vlogging.VisualRecord("Data", images_to_display, footnotes=categories))
+        logger.info(vlogging.VisualRecord("Data", images_to_display, footnotes=batch_categories))
 
 
 def main():
@@ -41,17 +46,25 @@ def main():
     Main runner
     """
 
-    logger = net.utilities.get_logger("/tmp/voc_fcn.html")
+    parser = argparse.ArgumentParser()
 
-    generator = net.voc.BatchesGeneratorFactory(net.config.DATA_DIRECTORY).get_generator(batch_size=1)
+    parser.add_argument('--config', action="store", required=True)
+    arguments = parser.parse_args(sys.argv[1:])
 
-    indices_to_colors_map, _, void_color = net.voc.get_colors_info(
-        len(net.config.CATEGORIES))
+    with open(arguments.config) as file:
+        config = yaml.safe_load(file)
+
+    logger = net.utilities.get_logger(config["log_path"])
+    categories = config["categories"]
+
+    generator = net.voc.BatchesGeneratorFactory(config["data_directory"]).get_generator(batch_size=1)
+
+    indices_to_colors_map, _, void_color = net.voc.get_colors_info(len(categories))
 
     for _ in tqdm.tqdm(range(10)):
 
         images, segmentations = next(generator)
-        log_batch(logger, images, segmentations, indices_to_colors_map, void_color)
+        log_batch(logger, images, segmentations, categories, indices_to_colors_map, void_color)
 
 
 if __name__ == "__main__":

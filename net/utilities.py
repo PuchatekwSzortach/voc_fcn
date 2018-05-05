@@ -36,3 +36,8 @@ def get_image_colors(image):
     image_colors = image.reshape(-1, 3)
     unique_colors_array = unique_colors_array = np.unique(image_colors, axis=0)
     return set(tuple(color) for color in unique_colors_array)
+
+
+def get_ids_to_values_map(values):
+
+    return {id: category for id, category in enumerate(values)}

@@ -104,3 +104,6 @@ ENV/
 .idea/
 
 .pytest_cache/
+
+
+data/

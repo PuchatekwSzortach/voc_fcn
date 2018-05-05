@@ -1,11 +1,6 @@
-"""
-Module with configuration data
-"""
-
-DATA_DIRECTORY = "../../data/VOC2012"
-
-CATEGORIES = [
-    'background',
+data_directory: "../../data/VOC2012"
+categories:
+    ['background',
     'aeroplane',
     'bicycle',
     'bird',
@@ -27,5 +22,4 @@ CATEGORIES = [
     'train',
     'tvmonitor']
 
-
-IDS_TO_CATEGORIES_MAP = {id: category for id, category in enumerate(CATEGORIES)}
+log_path: "/tmp/voc_fcn.html"

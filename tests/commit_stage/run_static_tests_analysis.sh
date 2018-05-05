@@ -12,4 +12,4 @@ echo "Running pycodestyle..."
 pycodestyle ./*
 
 echo "Running xenon..."
-xenon . --max-absolute A
+xenon . --max-absolute B
