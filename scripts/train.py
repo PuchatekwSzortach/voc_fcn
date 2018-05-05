@@ -23,30 +23,25 @@ def main():
     with open(arguments.config) as file:
         config = yaml.safe_load(file)
 
-    # generator = net.voc.BatchesGeneratorFactory(config["data_directory"]).get_generator(batch_size=1)
+    categories = config["categories"]
 
-    model = net.ml.FCNModel()
+    generator = net.voc.BatchesGeneratorFactory(config["data_directory"]).get_generator(
+        size_factor=config["size_factor"], batch_size=config["batch_size"])
 
-    paths = glob.glob("./data/*.jpg")
-    print(*paths, sep="\n")
-
-    images = np.array([cv2.imread(path) for path in paths])
-    print(images.shape)
+    model = net.ml.FCNModel(categories_count=len(categories))
 
     session = tf.keras.backend.get_session()
 
-    feed_dictionary = {
-        model.input: images
-    }
+    for _ in range(2):
 
-    predictions = session.run(model.output, feed_dictionary)
+        # images, segmentations = next(generator)
+        images = np.random.randint(0, 255, size=(1, 320, 480, 3))
 
-    for path, prediction in zip(paths, predictions):
-
-        prediction_index = np.argmax(prediction)
-        category = net.imagenet.mapping[prediction_index]
-
-        print("{} -> {}".format(os.path.basename(path), category))
+        feed_dictionary = {model.input: images}
+        prediction = session.run(model.output, feed_dictionary)
+        print(images.shape)
+        print(prediction.shape)
+        print()
 
 
 if __name__ == "__main__":
