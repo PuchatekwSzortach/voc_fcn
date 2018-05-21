@@ -13,7 +13,7 @@ import cv2
 import net.utilities
 
 
-class BatchesGeneratorFactory:
+class DataGeneratorFactory:
     """
     Factory class creating data batches generators
     """
@@ -22,17 +22,13 @@ class BatchesGeneratorFactory:
 
         self.images_paths_to_segmentation_paths_map = self._get_images_paths_to_segmentations_paths_map(data_directory)
 
-    def get_generator(self, size_factor, batch_size):
+    def get_generator(self, size_factor):
         """
         Get generator that outputs batch_size batches on each yield
-        :param batch_size: Desired batch sizes
         :return: data batches generator
         """
 
         images_paths = list(self.images_paths_to_segmentation_paths_map.keys())
-
-        images = []
-        segmentations = []
 
         while True:
 
@@ -51,15 +47,7 @@ class BatchesGeneratorFactory:
                 image = cv2.resize(image, target_size, interpolation=cv2.INTER_CUBIC)
                 segmentation = cv2.resize(segmentation, target_size, interpolation=cv2.INTER_NEAREST)
 
-                images.append(image)
-                segmentations.append(segmentation)
-
-                if len(images) == batch_size:
-
-                    yield sklearn.utils.shuffle(np.array(images), np.array(segmentations))
-
-                    images.clear()
-                    segmentations.clear()
+                yield image, segmentation
 
     def get_size(self):
         return len(self.images_paths_to_segmentation_paths_map.keys())

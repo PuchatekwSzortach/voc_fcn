@@ -25,4 +25,7 @@ categories:
 log_path: "/tmp/voc_fcn.html"
 
 size_factor: 32
-batch_size: 1
+
+
+train:
+    epochs: 10

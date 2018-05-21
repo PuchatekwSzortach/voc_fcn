@@ -1,12 +1,8 @@
 import argparse
 import sys
-import glob
-import os
 
 import yaml
 import tensorflow as tf
-import cv2
-import numpy as np
 
 import net.voc
 import net.ml
@@ -25,23 +21,22 @@ def main():
 
     categories = config["categories"]
 
-    generator = net.voc.BatchesGeneratorFactory(config["data_directory"]).get_generator(
-        size_factor=config["size_factor"], batch_size=config["batch_size"])
+    indices_to_colors_map, _, void_color = net.voc.get_colors_info(len(categories))
 
-    model = net.ml.FCNModel(categories_count=len(categories))
+    data_generator_factory = net.voc.DataGeneratorFactory(config["data_directory"])
+    generator = data_generator_factory.get_generator(size_factor=config["size_factor"])
+
+    network = net.ml.FullyConvolutionalNetwork(categories_count=len(categories))
+
+    initialized_variables = tf.global_variables()
 
     session = tf.keras.backend.get_session()
+    model = net.ml.Model(session, network, categories)
 
-    for _ in range(2):
+    uninitialized_variables = set(tf.global_variables()).difference(initialized_variables)
+    session.run(tf.variables_initializer(uninitialized_variables))
 
-        # images, segmentations = next(generator)
-        images = np.random.randint(0, 255, size=(1, 320, 480, 3))
-
-        feed_dictionary = {model.input: images}
-        prediction = session.run(model.output, feed_dictionary)
-        print(images.shape)
-        print(prediction.shape)
-        print()
+    model.train(generator, data_generator_factory.get_size(), indices_to_colors_map, config["train"])
 
 
 if __name__ == "__main__":
