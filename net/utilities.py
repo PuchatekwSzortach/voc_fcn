@@ -39,6 +39,11 @@ def get_image_colors(image):
 
 
 def get_ids_to_values_map(values):
+    """
+    Turns a list of values into a dictionary {value index: value}
+    :param values: list
+    :return: dictionary
+    """
 
     return {id: category for id, category in enumerate(values)}
 
@@ -60,3 +65,66 @@ def get_target_image_size(image_size, size_factor):
         target_sizes.append(target_size)
 
     return tuple(target_sizes)
+
+
+def get_bilinear_kernel(height, width, channels):
+    """
+    GEt a bilinear kernel for FCN upscaling/deconvolution.
+    It has a peak at center and drops off towards borders. Filters are the same across channels.
+    :param height: filter height
+    :param width: filter width
+    :param channels: number of channels
+    :return: 3D numpy array
+    """
+
+    if height % 2 != 0 or width % 2 != 0:
+        raise ValueError("Odd height and width are not supported")
+
+    height_array = np.zeros(height, dtype=np.float32)
+
+    half_height_range = range(1, (height // 2) + 1)
+    height_array[:height // 2] = half_height_range
+    height_array[height // 2:] = list(reversed(half_height_range))
+
+    width_array = np.zeros(height, dtype=np.float32)
+
+    half_width_range = range(1, (width // 2) + 1)
+    width_array[:width // 2] = half_width_range
+    width_array[width // 2:] = list(reversed(half_width_range))
+
+    unscaled_filter = np.dot(height_array.reshape(-1, 1), width_array.reshape(1, -1))
+    scaled_filter = unscaled_filter / np.sum(unscaled_filter)
+
+    return np.repeat(scaled_filter.reshape(height, width, 1), repeats=channels, axis=2)
+
+
+def bilinear_initializer(shape, dtype, partition_info):
+    """
+    Bilinear initializer for deconvolution filters
+    """
+
+    kernel = get_bilinear_kernel(shape[0], shape[1], shape[2])
+
+    broadcasted_kernel = np.repeat(kernel.reshape(shape[0], shape[1], shape[2], -1), repeats=shape[3], axis=3)
+    return broadcasted_kernel
+
+
+def get_categories_segmentations_maps(segmentation_cube, ids_to_categories_map):
+    """
+    Get categories names to their segmentation maps dictionary for all categories wit non-empty segmentations
+    in segmentation cube
+    :param segmentation_cube: 3D numpy array of segmentation masks
+    :param ids_to_categories_map: map of ids to categories name
+    :return: map of categories to segmentation maps
+    """
+
+    categories_segmentations_map = {}
+
+    for index, category in ids_to_categories_map.items():
+
+        segmentation = segmentation_cube[:, :, index]
+
+        if np.any(segmentation):
+            categories_segmentations_map[category] = segmentation
+
+    return categories_segmentations_map

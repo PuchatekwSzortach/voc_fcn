@@ -1,3 +1,7 @@
+"""
+Script for training FCN net
+"""
+
 import argparse
 import sys
 
@@ -6,10 +10,12 @@ import tensorflow as tf
 
 import net.voc
 import net.ml
-import net.imagenet
 
 
 def main():
+    """
+    Main driver
+    """
 
     parser = argparse.ArgumentParser()
 
@@ -21,7 +27,7 @@ def main():
 
     categories = config["categories"]
 
-    indices_to_colors_map, _, void_color = net.voc.get_colors_info(len(categories))
+    indices_to_colors_map, _, _ = net.voc.get_colors_info(len(categories))
 
     data_generator_factory = net.voc.DataGeneratorFactory(config["data_directory"])
     generator = data_generator_factory.get_generator(size_factor=config["size_factor"])

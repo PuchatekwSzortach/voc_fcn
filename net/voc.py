@@ -5,12 +5,45 @@ Code with VOC-specific functionality
 import glob
 import os
 import random
+import copy
 
-import sklearn.utils
 import numpy as np
 import cv2
 
 import net.utilities
+
+
+def get_images_paths_and_segmentations_paths_tuples(data_directory):
+    """
+    Returns a list of tuples, each tuple is an image path, segmentation path pair for a single image
+    :param data_directory: VOC data directory
+    :return: list of tuples
+    """
+
+    images_paths = glob.glob(os.path.join(data_directory, "JPEGImages/**.jpg"))
+    segmentation_paths = glob.glob(os.path.join(data_directory, "SegmentationClass/**.png"))
+
+    file_name_to_image_path_map = {}
+
+    # Get a dictionary mapping file names to full images paths
+    for image_path in images_paths:
+
+        file_name_with_extension = os.path.basename(image_path)
+        file_name = os.path.splitext(file_name_with_extension)[0]
+        file_name_to_image_path_map[file_name] = image_path
+
+    images_paths_and_segmentation_paths_tuples = []
+
+    # Now prepare a dictionary mapping segmentation paths to corresponding images paths
+    for segmentation_path in segmentation_paths:
+
+        file_name_with_extension = os.path.basename(segmentation_path)
+        file_name = os.path.splitext(file_name_with_extension)[0]
+        image_path = file_name_to_image_path_map[file_name]
+
+        images_paths_and_segmentation_paths_tuples.append((image_path, segmentation_path))
+
+    return images_paths_and_segmentation_paths_tuples
 
 
 class DataGeneratorFactory:
@@ -20,7 +53,8 @@ class DataGeneratorFactory:
 
     def __init__(self, data_directory):
 
-        self.images_paths_to_segmentation_paths_map = self._get_images_paths_to_segmentations_paths_map(data_directory)
+        self.images_paths_and_segmentations_paths_tuples = \
+            get_images_paths_and_segmentations_paths_tuples(data_directory)
 
     def get_generator(self, size_factor):
         """
@@ -28,15 +62,14 @@ class DataGeneratorFactory:
         :return: data batches generator
         """
 
-        images_paths = list(self.images_paths_to_segmentation_paths_map.keys())
+        local_images_paths_and_segmentations_paths_tuples = \
+            copy.deepcopy(self.images_paths_and_segmentations_paths_tuples)
 
         while True:
 
-            random.shuffle(images_paths)
+            random.shuffle(local_images_paths_and_segmentations_paths_tuples)
 
-            for key in images_paths:
-
-                image_path, segmentation_path = self.images_paths_to_segmentation_paths_map[key]
+            for image_path, segmentation_path in local_images_paths_and_segmentations_paths_tuples:
 
                 image = cv2.imread(image_path)
                 segmentation = cv2.imread(segmentation_path)
@@ -50,35 +83,11 @@ class DataGeneratorFactory:
                 yield image, segmentation
 
     def get_size(self):
-        return len(self.images_paths_to_segmentation_paths_map.keys())
-
-    @staticmethod
-    def _get_images_paths_to_segmentations_paths_map(data_directory):
-
-        images_paths = glob.glob(os.path.join(data_directory, "JPEGImages/**.jpg"))
-        segmentation_paths = glob.glob(os.path.join(data_directory, "SegmentationClass/**.png"))
-
-        file_name_to_image_path_map = {}
-
-        # Get a dictionary mapping file names to full images paths
-        for image_path in images_paths:
-
-            file_name_with_extension = os.path.basename(image_path)
-            file_name = os.path.splitext(file_name_with_extension)[0]
-            file_name_to_image_path_map[file_name] = image_path
-
-        data_map = {}
-
-        # Now prepare a dictionary mapping segmentation paths to corresponding images paths
-        for segmentation_path in segmentation_paths:
-
-            file_name_with_extension = os.path.basename(segmentation_path)
-            file_name = os.path.splitext(file_name_with_extension)[0]
-            image_path = file_name_to_image_path_map[file_name]
-
-            data_map[file_name] = (image_path, segmentation_path)
-
-        return data_map
+        """
+        Gets size of dataset served by the generator
+        :return: int
+        """
+        return len(self.images_paths_and_segmentations_paths_tuples)
 
 
 def get_colors_info(categories_count):
