@@ -10,6 +10,7 @@ import tensorflow as tf
 
 import net.voc
 import net.ml
+import net.callbacks
 
 
 def main():
@@ -27,9 +28,9 @@ def main():
 
     categories = config["categories"]
 
-    indices_to_colors_map, _, _ = net.voc.get_colors_info(len(categories))
+    indices_to_colors_map, _ = net.voc.get_colors_info(len(categories))
 
-    data_generator_factory = net.voc.DataGeneratorFactory(config["data_directory"])
+    data_generator_factory = net.voc.VOCSamplesGeneratorFactory(config["data_directory"])
     generator = data_generator_factory.get_generator(size_factor=config["size_factor"])
 
     network = net.ml.FullyConvolutionalNetwork(categories_count=len(categories))
@@ -42,7 +43,11 @@ def main():
     uninitialized_variables = set(tf.global_variables()).difference(initialized_variables)
     session.run(tf.variables_initializer(uninitialized_variables))
 
-    model.train(generator, data_generator_factory.get_size(), indices_to_colors_map, config["train"])
+    callbacks = [net.callbacks.LearningRateManager()]
+
+    model.train(
+        generator, data_generator_factory.get_size(),
+        indices_to_colors_map, config["train"], callbacks)
 
 
 if __name__ == "__main__":

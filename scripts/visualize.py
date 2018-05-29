@@ -14,12 +14,16 @@ import net.voc
 import net.ml
 
 
-def log_generator_output(logger, generator, categories, indices_to_colors_map, void_color):
+def log_voc_samples_generator_output(logger, configuration):
     """
-    Logs generator output
+    Logs voc samples generator output
     """
 
-    ids_to_categories_map = net.utilities.get_ids_to_values_map(categories)
+    generator_factory = net.voc.VOCSamplesGeneratorFactory(configuration["data_directory"])
+    generator = generator_factory.get_generator(configuration["size_factor"])
+
+    indices_to_colors_map, void_color = net.voc.get_colors_info(len(configuration["categories"]))
+    ids_to_categories_map = net.utilities.get_ids_to_values_map(configuration["categories"])
 
     for _ in tqdm.tqdm(range(10)):
 
@@ -37,6 +41,23 @@ def log_generator_output(logger, generator, categories, indices_to_colors_map, v
         logger.info(vlogging.VisualRecord("Data", images_to_display, footnotes=str(["void"] + list(categories))))
 
 
+def log_one_hot_encoded_voc_samples_generator_output(logger, configuration):
+    """
+    Logs one hot encoded voc samples generator output
+    """
+
+    indices_to_colors_map, void_color = net.voc.get_colors_info(len(configuration["categories"]))
+
+    generator_factory = net.voc.VOCOneHotEncodedSamplesGeneratorFactory(configuration["data_directory"])
+    generator = generator_factory.get_generator(configuration["size_factor"], indices_to_colors_map)
+
+    for _ in tqdm.tqdm(range(10)):
+
+        image, segmentation_cube = next(generator)
+
+        logger.info(vlogging.VisualRecord("Data", image))
+
+
 def main():
     """
     Main runner
@@ -51,15 +72,9 @@ def main():
         config = yaml.safe_load(file)
 
     logger = net.utilities.get_logger(config["log_path"])
-    categories = config["categories"]
 
-    indices_to_colors_map, _, void_color = net.voc.get_colors_info(len(categories))
-
-    generator_factory = net.voc.DataGeneratorFactory(config["data_directory"])
-    generator = generator_factory.get_generator(config["size_factor"])
-
-    indices_to_colors_map, _, void_color = net.voc.get_colors_info(len(categories))
-    log_generator_output(logger, generator, categories, indices_to_colors_map, void_color)
+    # log_voc_samples_generator_output(logger, config)
+    log_one_hot_encoded_voc_samples_generator_output(logger, config)
 
 
 if __name__ == "__main__":
