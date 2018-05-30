@@ -46,20 +46,25 @@ def get_images_paths_and_segmentations_paths_tuples(data_directory):
     return images_paths_and_segmentation_paths_tuples
 
 
-class DataGeneratorFactory:
+class VOCSamplesGeneratorFactory:
     """
-    Factory class creating data batches generators
+    Factory class creating data batches generators that yield (image, segmentation image) pairs
     """
 
     def __init__(self, data_directory):
+        """
+        Constructor
+        :param data_directory: directory with VOC data
+        """
 
         self.images_paths_and_segmentations_paths_tuples = \
             get_images_paths_and_segmentations_paths_tuples(data_directory)
 
     def get_generator(self, size_factor):
         """
-        Get generator that outputs batch_size batches on each yield
-        :return: data batches generator
+        Returns generator that yields (image_path, segmentation_image) pair on each yield
+        :param size_factor: int, value by which height and with of outputs must be divisible
+        :return: generator
         """
 
         local_images_paths_and_segmentations_paths_tuples = \
@@ -90,16 +95,53 @@ class DataGeneratorFactory:
         return len(self.images_paths_and_segmentations_paths_tuples)
 
 
+class VOCOneHotEncodedSamplesGeneratorFactory:
+    """
+    Factory class creating data batches generators that yield (image, segmentation cube) pairs
+    """
+
+    def __init__(self, data_directory):
+        """
+        Constructor
+        :param data_directory: directory with VOC data
+        """
+
+        self.voc_samples_generator_factory = VOCSamplesGeneratorFactory(data_directory)
+
+    def get_generator(self, size_factor, indices_to_colors_map):
+        """
+        Returns generator that yields (image_path, segmentation_image) pair on each yield
+        :param size_factor: int, value by which height and with of outputs must be divisible
+        :return: generator
+        """
+
+        voc_samples_generator = self.voc_samples_generator_factory.get_generator(size_factor)
+
+        while True:
+
+            image, segmentation = next(voc_samples_generator)
+
+            segmentation_cube = get_segmentation_cube(segmentation, indices_to_colors_map)
+            yield image, segmentation_cube
+
+    def get_size(self):
+        """
+        Gets size of dataset served by the generator
+        :return: int
+        """
+
+        return self.voc_samples_generator_factory.get_size()
+
+
 def get_colors_info(categories_count):
     """
-    Returns two dictionaries and a 3-element tuple.
-     First dictionary maps VOC categories indices to colors in VOC segmentation images
-     Second dictionary maps segmentation colors to categories
-     3-element tuple represents color of void - that is ambiguous regions.
-     All colors are returned in BGR order.
+    Get ids to colors dictionary and void color.
+    Ids to colors dictionary maps gives colors used in VOC dataset for a given category id.
+    Void color represents ambiguous regions in segmentations.
+    All colors are returned in BGR order.
     Code adapted from https://gist.github.com/wllhf/a4533e0adebe57e3ed06d4b50c8419ae
     :param categories_count: number of categories - includes background, but doesn't include void
-    :return: map, map, tuple
+    :return: map, tuple
     """
 
     colors_count = 256
@@ -131,9 +173,7 @@ def get_colors_info(categories_count):
         colors_matrix[color_index] = blue, green, red
 
     indices_to_colors_map = {color_index: tuple(colors_matrix[color_index]) for color_index in range(categories_count)}
-    colors_to_indices_map = {color: index for index, color in indices_to_colors_map.items()}
-
-    return indices_to_colors_map, colors_to_indices_map, tuple(colors_matrix[-1])
+    return indices_to_colors_map, tuple(colors_matrix[-1])
 
 
 def get_void_mask(segmentation_image, void_color):
@@ -151,7 +191,7 @@ def get_segmentation_cube(segmentation_image, indices_to_colors_map):
     """
     Turns 2D 3-channel segmentation image with into a batch of 2D binary maps - one for each
     segmentation category
-    :param segmentation_image: 2D 3-channnel segmentation image
+    :param segmentation_image: 2D 3-channel segmentation image
     :param indices_to_colors_map: dictionary mapping categories indices to image colors
     :return: 3D array with a binary 2D map for each category at a corresponding index
     """
@@ -167,3 +207,29 @@ def get_segmentation_cube(segmentation_image, indices_to_colors_map):
         segmentation_cube[:, :, index] = segmentation_mask
 
     return segmentation_cube
+
+
+def get_segmentation_image(segmentation_cube, indices_to_colors_map, void_color):
+    """
+    Turns segmentation cube into a segmentation image.
+    :param segmentation_cube: 3D array of segmentation maps, each map for a single category
+    :param indices_to_colors_map: dictionary mapping categories indices to colors
+    :param void_color: color to be used for areas with no segmentation category specified
+    :return: 3D array
+    """
+
+    image_shape = segmentation_cube.shape[:2] + (3, )
+    image = np.zeros(image_shape, dtype=np.uint8)
+    image[:, :] = void_color
+
+    max_segmentation_indices_array = np.argmax(segmentation_cube, axis=2)
+
+    for y in range(image_shape[0]):
+        for x in range(image_shape[1]):
+
+            max_segmentation_index = max_segmentation_indices_array[y, x]
+
+            if segmentation_cube[y, x, max_segmentation_index] != 0:
+                image[y, x] = indices_to_colors_map[max_segmentation_index]
+
+    return image

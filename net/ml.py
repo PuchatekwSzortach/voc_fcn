@@ -81,15 +81,19 @@ class Model:
 
         self.train_op = tf.train.AdamOptimizer(learning_rate=0.00001).minimize(self.loss_op)
 
-    def train(self, generator, data_size, indices_to_colors_map, configuration):
+    def train(self, generator, data_size, configuration, callbacks=None):
+        """
+        Trains network
+        :param generator: training samples generator
+        :param data_size: training dataset size
+        :param configuration: dictionary with training options
+        :param callbacks: list of callbacks to call at end of each epoch
         """
 
-        :param generator:
-        :param data_size:
-        :param indices_to_colors_map:
-        :param configuration:
-        :return:
-        """
+        model_callbacks = callbacks if callbacks is not None else []
+
+        for callback in model_callbacks:
+            callback.model = self
 
         for _ in range(configuration["epochs"]):
 
@@ -97,9 +101,7 @@ class Model:
 
             for _ in tqdm.tqdm(range(data_size)):
 
-                image, segmentation = next(generator)
-
-                segmentation_cube = net.voc.get_segmentation_cube(segmentation, indices_to_colors_map)
+                image, segmentation_cube = next(generator)
 
                 feed_dictionary = {
                     self.network.input_placeholder: np.array([image]),
