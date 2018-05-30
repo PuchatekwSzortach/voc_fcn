@@ -24,13 +24,3 @@ class Callback:
         """
 
         raise NotImplementedError()
-
-
-class LearningRateManager(Callback):
-    """
-    Callback managing learning rate
-    """
-
-    def __init__(self):
-
-        super().__init__()

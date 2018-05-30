@@ -19,10 +19,10 @@ def log_voc_samples_generator_output(logger, configuration):
     Logs voc samples generator output
     """
 
-    generator_factory = net.voc.VOCSamplesGeneratorFactory(configuration["data_directory"])
-    generator = generator_factory.get_generator(configuration["size_factor"])
+    generator = net.voc.VOCSamplesGeneratorFactory(
+        configuration["data_directory"]).get_generator(configuration["size_factor"])
 
-    indices_to_colors_map, void_color = net.voc.get_colors_info(len(configuration["categories"]))
+    ids_to_colors_map, void_color = net.voc.get_colors_info(len(configuration["categories"]))
     ids_to_categories_map = net.utilities.get_ids_to_values_map(configuration["categories"])
 
     for _ in tqdm.tqdm(range(10)):
@@ -30,7 +30,7 @@ def log_voc_samples_generator_output(logger, configuration):
         image, segmentation = next(generator)
 
         void_mask = net.voc.get_void_mask(segmentation, void_color)
-        segmentation_cube = net.voc.get_segmentation_cube(segmentation, indices_to_colors_map)
+        segmentation_cube = net.voc.get_segmentation_cube(segmentation, ids_to_colors_map)
 
         categories_segementations_map = net.utilities.get_categories_segmentations_maps(
             segmentation_cube, ids_to_categories_map)
@@ -54,8 +54,9 @@ def log_one_hot_encoded_voc_samples_generator_output(logger, configuration):
     for _ in tqdm.tqdm(range(10)):
 
         image, segmentation_cube = next(generator)
+        segmentation_image = net.voc.get_segmentation_image(segmentation_cube, indices_to_colors_map, void_color)
 
-        logger.info(vlogging.VisualRecord("Data", image))
+        logger.info(vlogging.VisualRecord("Data", [image, segmentation_image]))
 
 
 def main():
