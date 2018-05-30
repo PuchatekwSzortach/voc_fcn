@@ -30,10 +30,8 @@ def main():
 
     indices_to_colors_map, _ = net.voc.get_colors_info(len(categories))
 
-    # data_generator_factory = net.voc.VOCSamplesGeneratorFactory(config["data_directory"])
-    # generator = data_generator_factory.get_generator(size_factor=config["size_factor"])
-
-    data_generator_factory = net.voc.VOCOneHotEncodedSamplesGeneratorFactory(config["data_directory"])
+    data_generator_factory = net.voc.VOCOneHotEncodedSamplesGeneratorFactory(
+        config["data_directory"], config["train_set_path"])
 
     generator = data_generator_factory.get_generator(
         size_factor=config["size_factor"], indices_to_colors_map=indices_to_colors_map)

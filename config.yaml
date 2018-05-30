@@ -1,4 +1,7 @@
 data_directory: "../../data/VOC2012"
+train_set_path: "ImageSets/Segmentation/train.txt"
+validation_set_path: "ImageSets/Segmentation/val.txt"
+
 categories:
     ['background',
     'aeroplane',

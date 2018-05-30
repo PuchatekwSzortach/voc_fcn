@@ -2,7 +2,6 @@
 Code with VOC-specific functionality
 """
 
-import glob
 import os
 import random
 import copy
@@ -13,33 +12,24 @@ import cv2
 import net.utilities
 
 
-def get_images_paths_and_segmentations_paths_tuples(data_directory):
+def get_images_paths_and_segmentations_paths_tuples(data_directory, data_set_path):
     """
     Returns a list of tuples, each tuple is an image path, segmentation path pair for a single image
     :param data_directory: VOC data directory
+    :param data_set_path: path to list of filenames to be read from from data directory
     :return: list of tuples
     """
 
-    images_paths = glob.glob(os.path.join(data_directory, "JPEGImages/**.jpg"))
-    segmentation_paths = glob.glob(os.path.join(data_directory, "SegmentationClass/**.png"))
+    with open(os.path.join(data_directory, data_set_path)) as file:
 
-    file_name_to_image_path_map = {}
-
-    # Get a dictionary mapping file names to full images paths
-    for image_path in images_paths:
-
-        file_name_with_extension = os.path.basename(image_path)
-        file_name = os.path.splitext(file_name_with_extension)[0]
-        file_name_to_image_path_map[file_name] = image_path
+        file_stems = [line.strip() for line in file.readlines()]
 
     images_paths_and_segmentation_paths_tuples = []
 
-    # Now prepare a dictionary mapping segmentation paths to corresponding images paths
-    for segmentation_path in segmentation_paths:
+    for file_stem in file_stems:
 
-        file_name_with_extension = os.path.basename(segmentation_path)
-        file_name = os.path.splitext(file_name_with_extension)[0]
-        image_path = file_name_to_image_path_map[file_name]
+        image_path = os.path.join(data_directory, "JPEGImages/{}.jpg".format(file_stem))
+        segmentation_path = os.path.join(data_directory, "SegmentationClass/{}.png".format(file_stem))
 
         images_paths_and_segmentation_paths_tuples.append((image_path, segmentation_path))
 
@@ -51,14 +41,15 @@ class VOCSamplesGeneratorFactory:
     Factory class creating data batches generators that yield (image, segmentation image) pairs
     """
 
-    def __init__(self, data_directory):
+    def __init__(self, data_directory, data_set_path):
         """
         Constructor
         :param data_directory: directory with VOC data
+        :param data_set_path: path to list of filenames to be read from from data directory
         """
 
         self.images_paths_and_segmentations_paths_tuples = \
-            get_images_paths_and_segmentations_paths_tuples(data_directory)
+            get_images_paths_and_segmentations_paths_tuples(data_directory, data_set_path)
 
     def get_generator(self, size_factor):
         """
@@ -100,13 +91,14 @@ class VOCOneHotEncodedSamplesGeneratorFactory:
     Factory class creating data batches generators that yield (image, segmentation cube) pairs
     """
 
-    def __init__(self, data_directory):
+    def __init__(self, data_directory, data_set_path):
         """
         Constructor
         :param data_directory: directory with VOC data
+        :param data_set_path: path to list of filenames to be read from from data directory
         """
 
-        self.voc_samples_generator_factory = VOCSamplesGeneratorFactory(data_directory)
+        self.voc_samples_generator_factory = VOCSamplesGeneratorFactory(data_directory, data_set_path)
 
     def get_generator(self, size_factor, indices_to_colors_map):
         """
