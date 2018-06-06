@@ -41,20 +41,23 @@ class VOCSamplesGeneratorFactory:
     Factory class creating data batches generators that yield (image, segmentation image) pairs
     """
 
-    def __init__(self, data_directory, data_set_path):
+    def __init__(self, data_directory, data_set_path, size_factor):
         """
         Constructor
         :param data_directory: directory with VOC data
         :param data_set_path: path to list of filenames to be read from from data directory
+        :param size_factor: int, value by which height and with of outputs must be divisible
         """
 
         self.images_paths_and_segmentations_paths_tuples = \
             get_images_paths_and_segmentations_paths_tuples(data_directory, data_set_path)
 
-    def get_generator(self, size_factor):
+        self.size_factor = size_factor
+
+    def get_generator(self):
         """
         Returns generator that yields (image_path, segmentation_image) pair on each yield
-        :param size_factor: int, value by which height and with of outputs must be divisible
+
         :return: generator
         """
 
@@ -70,7 +73,7 @@ class VOCSamplesGeneratorFactory:
                 image = cv2.imread(image_path)
                 segmentation = cv2.imread(segmentation_path)
 
-                target_size = net.utilities.get_target_image_size(image.shape[:2], size_factor)
+                target_size = net.utilities.get_target_image_size(image.shape[:2], self.size_factor)
                 target_size = target_size[1], target_size[0]
 
                 image = cv2.resize(image, target_size, interpolation=cv2.INTER_CUBIC)
@@ -91,29 +94,32 @@ class VOCOneHotEncodedSamplesGeneratorFactory:
     Factory class creating data batches generators that yield (image, segmentation cube) pairs
     """
 
-    def __init__(self, data_directory, data_set_path):
+    def __init__(self, data_directory, data_set_path, size_factor, indices_to_colors_map):
         """
         Constructor
         :param data_directory: directory with VOC data
         :param data_set_path: path to list of filenames to be read from from data directory
+        :param size_factor: int, value by which height and with of outputs must be divisible
+        :param indices_to_colors_map: dictionary mapping categories indices to colors
         """
 
-        self.voc_samples_generator_factory = VOCSamplesGeneratorFactory(data_directory, data_set_path)
+        self.voc_samples_generator_factory = VOCSamplesGeneratorFactory(data_directory, data_set_path, size_factor)
+        self.indices_to_colors_map = indices_to_colors_map
 
-    def get_generator(self, size_factor, indices_to_colors_map):
+    def get_generator(self):
         """
         Returns generator that yields (image_path, segmentation_image) pair on each yield
-        :param size_factor: int, value by which height and with of outputs must be divisible
+
         :return: generator
         """
 
-        voc_samples_generator = self.voc_samples_generator_factory.get_generator(size_factor)
+        voc_samples_generator = self.voc_samples_generator_factory.get_generator()
 
         while True:
 
             image, segmentation = next(voc_samples_generator)
 
-            segmentation_cube = get_segmentation_cube(segmentation, indices_to_colors_map)
+            segmentation_cube = get_segmentation_cube(segmentation, self.indices_to_colors_map)
             yield image, segmentation_cube
 
     def get_size(self):
@@ -214,14 +220,12 @@ def get_segmentation_image(segmentation_cube, indices_to_colors_map, void_color)
     image = np.zeros(image_shape, dtype=np.uint8)
     image[:, :] = void_color
 
-    max_segmentation_indices_array = np.argmax(segmentation_cube, axis=2)
+    max_segmentation_indices_matrix = np.argmax(segmentation_cube, axis=2)
+    max_segmentation_values = np.max(segmentation_cube, axis=2)
 
-    for y in range(image_shape[0]):
-        for x in range(image_shape[1]):
+    for index, color in indices_to_colors_map.items():
 
-            max_segmentation_index = max_segmentation_indices_array[y, x]
-
-            if segmentation_cube[y, x, max_segmentation_index] != 0:
-                image[y, x] = indices_to_colors_map[max_segmentation_index]
+        pixels_to_draw = (max_segmentation_indices_matrix == index) & (max_segmentation_values != 0)
+        image[pixels_to_draw] = color
 
     return image

@@ -81,14 +81,15 @@ class Model:
 
         self.train_op = tf.train.AdamOptimizer(learning_rate=0.00001).minimize(self.loss_op)
 
-    def train(self, generator, data_size, configuration, callbacks=None):
+    def train(self, training_data_generator_factory, configuration, callbacks=None):
         """
         Trains network
-        :param generator: training samples generator
-        :param data_size: training dataset size
+        :param training_data_generator_factory: factor for creating training data generator and inquiring about its size
         :param configuration: dictionary with training options
         :param callbacks: list of callbacks to call at end of each epoch
         """
+
+        training_data_generator = training_data_generator_factory.get_generator()
 
         model_callbacks = callbacks if callbacks is not None else []
 
@@ -99,9 +100,9 @@ class Model:
 
             losses = []
 
-            for _ in tqdm.tqdm(range(data_size)):
+            for _ in tqdm.tqdm(range(training_data_generator_factory.get_size())):
 
-                image, segmentation_cube = next(generator)
+                image, segmentation_cube = next(training_data_generator)
 
                 feed_dictionary = {
                     self.network.input_placeholder: np.array([image]),
