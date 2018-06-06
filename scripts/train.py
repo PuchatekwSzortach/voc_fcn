@@ -30,11 +30,8 @@ def main():
 
     indices_to_colors_map, _ = net.voc.get_colors_info(len(categories))
 
-    data_generator_factory = net.voc.VOCOneHotEncodedSamplesGeneratorFactory(
-        config["data_directory"], config["train_set_path"])
-
-    generator = data_generator_factory.get_generator(
-        size_factor=config["size_factor"], indices_to_colors_map=indices_to_colors_map)
+    training_data_generator_factory = net.voc.VOCOneHotEncodedSamplesGeneratorFactory(
+        config["data_directory"], config["train_set_path"], config["size_factor"], indices_to_colors_map)
 
     network = net.ml.FullyConvolutionalNetwork(categories_count=len(categories))
 
@@ -46,7 +43,7 @@ def main():
     uninitialized_variables = set(tf.global_variables()).difference(initialized_variables)
     session.run(tf.variables_initializer(uninitialized_variables))
 
-    model.train(generator, data_generator_factory.get_size(), config["train"])
+    model.train(training_data_generator_factory, config["train"])
 
 
 if __name__ == "__main__":
