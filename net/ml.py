@@ -2,6 +2,8 @@
 Module with machine learning code
 """
 
+import os
+
 import tensorflow as tf
 import numpy as np
 import tqdm
@@ -81,36 +83,83 @@ class Model:
 
         self.train_op = tf.train.AdamOptimizer(learning_rate=0.00001).minimize(self.loss_op)
 
-    def train(self, training_data_generator_factory, configuration, callbacks=None):
+    def train(self, training_data_generator_factory, validation_data_generator_factory, configuration, callbacks=None):
         """
         Trains network
-        :param training_data_generator_factory: factor for creating training data generator and inquiring about its size
+        :param training_data_generator_factory:
+        factory for creating training data generator and inquiring about its size
+        :param validation_data_generator_factory:
+        factory for creating validation data generator and inquiring about its size
         :param configuration: dictionary with training options
         :param callbacks: list of callbacks to call at end of each epoch
         """
-
-        training_data_generator = training_data_generator_factory.get_generator()
 
         model_callbacks = callbacks if callbacks is not None else []
 
         for callback in model_callbacks:
             callback.model = self
 
-        for _ in range(configuration["epochs"]):
+        for epoch_index in range(configuration["epochs"]):
 
-            losses = []
+            print("Epoch {}".format(epoch_index))
 
-            for _ in tqdm.tqdm(range(training_data_generator_factory.get_size())):
+            epoch_log = {
+                "training_loss": self._train_for_one_epoch(training_data_generator_factory),
+                "validation_loss": self._get_validation_loss(validation_data_generator_factory)
+            }
 
-                image, segmentation_cube = next(training_data_generator)
+            print(epoch_log)
 
-                feed_dictionary = {
-                    self.network.input_placeholder: np.array([image]),
-                    self.labels_placeholder: np.array([segmentation_cube], dtype=np.float32),
-                }
+            for callback in model_callbacks:
+                callback.on_epoch_end(epoch_log)
 
-                _, loss = self.session.run([self.train_op, self.loss_op], feed_dictionary)
+    def _train_for_one_epoch(self, training_data_generator_factory):
 
-                losses.append(loss)
+        training_data_generator = training_data_generator_factory.get_generator()
 
-            print("Loss: {}".format(np.mean(losses)))
+        training_losses = []
+
+        # for _ in tqdm.tqdm(range(10)):
+        for _ in tqdm.tqdm(range(training_data_generator_factory.get_size())):
+
+            image, segmentation_cube = next(training_data_generator)
+
+            feed_dictionary = {
+                self.network.input_placeholder: np.array([image]),
+                self.labels_placeholder: np.array([segmentation_cube], dtype=np.float32),
+            }
+
+            _, loss = self.session.run([self.train_op, self.loss_op], feed_dictionary)
+            training_losses.append(loss)
+
+        return np.mean(training_losses)
+
+    def _get_validation_loss(self, validation_data_generator_factory):
+
+        validation_data_generator = validation_data_generator_factory.get_generator()
+        validation_losses = []
+
+        # for _ in tqdm.tqdm(range(10)):
+        for _ in tqdm.tqdm(range(validation_data_generator_factory.get_size())):
+
+            image, segmentation_cube = next(validation_data_generator)
+
+            feed_dictionary = {
+                self.network.input_placeholder: np.array([image]),
+                self.labels_placeholder: np.array([segmentation_cube], dtype=np.float32),
+            }
+
+            loss = self.session.run(self.loss_op, feed_dictionary)
+            validation_losses.append(loss)
+
+        return np.mean(validation_losses)
+
+    def save(self, save_path):
+        """
+        Save model's network
+        :param save_path: prefix for filenames created for the checkpoint
+        """
+
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        saver = tf.train.Saver()
+        saver.save(self.session, save_path)
