@@ -33,17 +33,25 @@ def main():
     training_data_generator_factory = net.voc.VOCOneHotEncodedSamplesGeneratorFactory(
         config["data_directory"], config["train_set_path"], config["size_factor"], indices_to_colors_map)
 
+    validation_data_generator_factory = net.voc.VOCOneHotEncodedSamplesGeneratorFactory(
+        config["data_directory"], config["validation_set_path"], config["size_factor"], indices_to_colors_map)
+
     network = net.ml.FullyConvolutionalNetwork(categories_count=len(categories))
 
     initialized_variables = tf.global_variables()
 
     session = tf.keras.backend.get_session()
+
+    callbacks = [
+        net.callbacks.ModelCheckpoint(config["model_checkpoint_directory"])
+    ]
+
     model = net.ml.Model(session, network, categories)
 
     uninitialized_variables = set(tf.global_variables()).difference(initialized_variables)
     session.run(tf.variables_initializer(uninitialized_variables))
 
-    model.train(training_data_generator_factory, config["train"])
+    model.train(training_data_generator_factory, validation_data_generator_factory, config["train"], callbacks)
 
 
 if __name__ == "__main__":
