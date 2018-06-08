@@ -55,3 +55,27 @@ class ModelCheckpoint(Callback):
 
             self.best_validation_loss = epoch_log["validation_loss"]
             self.model.save(self.save_path)
+
+
+class EarlyStopping(Callback):
+    """
+    Callback that instructs model to stop training if validation loss didn't improve for too many epochs
+    """
+
+    def __init__(self, patience, verbose=True):
+        """
+        Constructor
+        :param patience: int, number of epochs that have to pass without validation loss
+        improvement before callback will ask model to stop training
+        :param verbose: bool, sets callback's verbosity
+        """
+
+        super().__init__()
+
+        self.patience = patience
+        self.best_validation_loss = np.inf
+        self.verbose = verbose
+
+    def on_epoch_end(self, epoch_log):
+
+        print("Huh")

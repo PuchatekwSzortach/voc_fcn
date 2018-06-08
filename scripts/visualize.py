@@ -8,6 +8,7 @@ import sys
 import yaml
 import vlogging
 import tqdm
+import tensorflow as tf
 
 import net.utilities
 import net.voc
@@ -63,6 +64,38 @@ def log_one_hot_encoded_voc_samples_generator_output(logger, configuration):
         logger.info(vlogging.VisualRecord("Data", [image, segmentation_image]))
 
 
+def log_trained_model_predictions(logger, configuration):
+    """
+    Logs trained model's predictions
+    """
+
+    indices_to_colors_map, void_color = net.voc.get_colors_info(len(configuration["categories"]))
+
+    network = net.ml.FullyConvolutionalNetwork(categories_count=len(configuration["categories"]))
+
+    session = tf.keras.backend.get_session()
+    model = net.ml.Model(session, network, configuration["categories"])
+
+    model.load(configuration["model_checkpoint_path"])
+
+    generator_factory = net.voc.VOCSamplesGeneratorFactory(
+        configuration["data_directory"], configuration["validation_set_path"],
+        configuration["size_factor"])
+
+    generator = generator_factory.get_generator()
+
+    for _ in tqdm.tqdm(range(10)):
+
+        image, segmentation_image = next(generator)
+
+        predicted_segmentation_cube = model.predict(image)
+
+        predicted_segmentation_image = net.voc.get_segmentation_image(
+            predicted_segmentation_cube, indices_to_colors_map, void_color)
+
+        logger.info(vlogging.VisualRecord("Data", [image, segmentation_image, predicted_segmentation_image]))
+
+
 def main():
     """
     Main runner
@@ -79,7 +112,8 @@ def main():
     logger = net.utilities.get_logger(config["log_path"])
 
     # log_voc_samples_generator_output(logger, config)
-    log_one_hot_encoded_voc_samples_generator_output(logger, config)
+    # log_one_hot_encoded_voc_samples_generator_output(logger, config)
+    log_trained_model_predictions(logger, config)
 
 
 if __name__ == "__main__":

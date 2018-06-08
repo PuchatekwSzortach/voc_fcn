@@ -113,6 +113,19 @@ class Model:
             for callback in model_callbacks:
                 callback.on_epoch_end(epoch_log)
 
+    def predict(self, image):
+        """
+        Computes prediction on a single image
+        :param image: numpy array
+        :return: segmentation prediction cube
+        """
+
+        feed_dictionary = {
+            self.network.input_placeholder: np.array([image])
+        }
+
+        return self.session.run(self.network.ops_map["predictions"], feed_dictionary)[0]
+
     def _train_for_one_epoch(self, training_data_generator_factory):
 
         training_data_generator = training_data_generator_factory.get_generator()
@@ -161,5 +174,12 @@ class Model:
         """
 
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        saver = tf.train.Saver()
-        saver.save(self.session, save_path)
+        tf.train.Saver().save(self.session, save_path)
+
+    def load(self, save_path):
+        """
+        Save model's network
+        :param save_path: prefix for filenames created for the checkpoint
+        """
+
+        tf.train.Saver().restore(self.session, save_path)
