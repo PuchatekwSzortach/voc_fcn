@@ -82,6 +82,7 @@ class Model:
             onehot_labels=self.labels_placeholder, logits=self.network.ops_map["logits"])
 
         self.train_op = tf.train.AdamOptimizer(learning_rate=0.00001).minimize(self.loss_op)
+        self.should_continue_training = None
 
     def train(self, training_data_generator_factory, validation_data_generator_factory, configuration, callbacks=None):
         """
@@ -94,14 +95,17 @@ class Model:
         :param callbacks: list of callbacks to call at end of each epoch
         """
 
+        self.should_continue_training = True
+        epoch_index = 0
+
         model_callbacks = callbacks if callbacks is not None else []
 
         for callback in model_callbacks:
             callback.model = self
 
-        for epoch_index in range(configuration["epochs"]):
+        while epoch_index < configuration["epochs"] and self.should_continue_training is True:
 
-            print("Epoch {}".format(epoch_index))
+            print("Epoch {}/{}".format(epoch_index, configuration["epochs"]))
 
             epoch_log = {
                 "training_loss": self._train_for_one_epoch(training_data_generator_factory),
@@ -112,6 +116,21 @@ class Model:
 
             for callback in model_callbacks:
                 callback.on_epoch_end(epoch_log)
+
+            epoch_index += 1
+
+    def predict(self, image):
+        """
+        Computes prediction on a single image
+        :param image: numpy array
+        :return: segmentation prediction cube
+        """
+
+        feed_dictionary = {
+            self.network.input_placeholder: np.array([image])
+        }
+
+        return self.session.run(self.network.ops_map["predictions"], feed_dictionary)[0]
 
     def _train_for_one_epoch(self, training_data_generator_factory):
 
@@ -161,5 +180,12 @@ class Model:
         """
 
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        saver = tf.train.Saver()
-        saver.save(self.session, save_path)
+        tf.train.Saver().save(self.session, save_path)
+
+    def load(self, save_path):
+        """
+        Save model's network
+        :param save_path: prefix for filenames created for the checkpoint
+        """
+
+        tf.train.Saver().restore(self.session, save_path)

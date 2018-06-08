@@ -43,7 +43,8 @@ def main():
     session = tf.keras.backend.get_session()
 
     callbacks = [
-        net.callbacks.ModelCheckpoint(config["model_checkpoint_directory"])
+        net.callbacks.ModelCheckpoint(config["model_checkpoint_path"]),
+        net.callbacks.EarlyStopping(config["train"]["patience"])
     ]
 
     model = net.ml.Model(session, network, categories)
