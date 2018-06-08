@@ -82,6 +82,7 @@ class Model:
             onehot_labels=self.labels_placeholder, logits=self.network.ops_map["logits"])
 
         self.train_op = tf.train.AdamOptimizer(learning_rate=0.00001).minimize(self.loss_op)
+        self.should_continue_training = None
 
     def train(self, training_data_generator_factory, validation_data_generator_factory, configuration, callbacks=None):
         """
@@ -94,14 +95,17 @@ class Model:
         :param callbacks: list of callbacks to call at end of each epoch
         """
 
+        self.should_continue_training = True
+        epoch_index = 0
+
         model_callbacks = callbacks if callbacks is not None else []
 
         for callback in model_callbacks:
             callback.model = self
 
-        for epoch_index in range(configuration["epochs"]):
+        while epoch_index < configuration["epochs"] and self.should_continue_training is True:
 
-            print("Epoch {}".format(epoch_index))
+            print("Epoch {}/{}".format(epoch_index, configuration["epochs"]))
 
             epoch_log = {
                 "training_loss": self._train_for_one_epoch(training_data_generator_factory),
@@ -112,6 +116,8 @@ class Model:
 
             for callback in model_callbacks:
                 callback.on_epoch_end(epoch_log)
+
+            epoch_index += 1
 
     def predict(self, image):
         """

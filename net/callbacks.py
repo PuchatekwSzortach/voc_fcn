@@ -76,6 +76,22 @@ class EarlyStopping(Callback):
         self.best_validation_loss = np.inf
         self.verbose = verbose
 
+        self.epochs_since_last_improvement = 0
+
     def on_epoch_end(self, epoch_log):
 
-        print("Huh")
+        if epoch_log["validation_loss"] < 0.999 * self.best_validation_loss:
+
+            self.best_validation_loss = epoch_log["validation_loss"]
+            self.epochs_since_last_improvement = 0
+
+        else:
+
+            self.epochs_since_last_improvement += 1
+
+        if self.epochs_since_last_improvement > self.patience:
+
+            self.model.should_continue_training = False
+
+            if self.verbose:
+                "Early stopping!!!"

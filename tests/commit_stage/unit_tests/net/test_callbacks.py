@@ -9,7 +9,7 @@ import net.callbacks
 
 def test_model_checkpoint():
     """
-    Test ModelCheckpoint
+    Test ModelCheckpoint callback
     """
 
     callback = net.callbacks.ModelCheckpoint(save_path=None, verbose=False)
@@ -34,3 +34,50 @@ def test_model_checkpoint():
 
     assert callback.model.save.called is True
     assert callback.best_validation_loss == 50
+
+
+def test_early_stopping():
+    """
+    Tests EarlyStopping callback
+    """
+
+    callback = net.callbacks.EarlyStopping(patience=3, verbose=False)
+
+    callback.model = unittest.mock.Mock()
+    callback.model.should_continue_training = True
+
+    # Loss improved from infinity
+    callback.on_epoch_end({"validation_loss": 100})
+    assert callback.model.should_continue_training is True
+
+    # Loss didn't improve for one epoch
+    callback.on_epoch_end({"validation_loss": 100})
+    assert callback.model.should_continue_training is True
+
+    # Loss didn't improve for two epochs
+    callback.on_epoch_end({"validation_loss": 100})
+    assert callback.model.should_continue_training is True
+
+    # Loss didn't improve for three epochs
+    callback.on_epoch_end({"validation_loss": 100})
+    assert callback.model.should_continue_training is True
+
+    # Loss improved
+    callback.on_epoch_end({"validation_loss": 50})
+    assert callback.model.should_continue_training is True
+
+    # Loss didn't improve for one epoch
+    callback.on_epoch_end({"validation_loss": 50})
+    assert callback.model.should_continue_training is True
+
+    # Loss didn't improve for two epochs
+    callback.on_epoch_end({"validation_loss": 50})
+    assert callback.model.should_continue_training is True
+
+    # Loss didn't improve for three epochs
+    callback.on_epoch_end({"validation_loss": 50})
+    assert callback.model.should_continue_training is True
+
+    # Loss didn't improve for four epochs - we went over patience period
+    callback.on_epoch_end({"validation_loss": 50})
+    assert callback.model.should_continue_training is False
