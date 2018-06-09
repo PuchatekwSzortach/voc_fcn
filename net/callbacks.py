@@ -32,29 +32,39 @@ class ModelCheckpoint(Callback):
     Only saves network if its validation loss improved by at least 0.1% over previous result
     """
 
-    def __init__(self, save_path, verbose=True):
+    def __init__(self, save_path, skip_epochs_count, verbose=True):
         """
         Constructor
         :param save_path: prefix for filenames created for the checkpoint
+        :param skip_epochs_count: number of epochs from the start during which callback won't ask model to save itself
         :param verbose: bool, sets callback's verbosity
         """
 
         super().__init__()
 
         self.save_path = save_path
+        self.skip_epochs_count = skip_epochs_count
         self.best_validation_loss = np.inf
         self.verbose = verbose
 
     def on_epoch_end(self, epoch_log):
 
-        if epoch_log["validation_loss"] < 0.999 * self.best_validation_loss:
+        has_loss_improved = epoch_log["validation_loss"] < 0.999 * self.best_validation_loss
+
+        should_save_model = has_loss_improved and epoch_log["epoch_index"] > self.skip_epochs_count
+
+        # Save model if loss improved and we past skip epochs count
+        if should_save_model:
 
             if self.verbose:
                 print("Validation loss improved from {} to {}, saving model".format(
                     self.best_validation_loss, epoch_log["validation_loss"]))
 
-            self.best_validation_loss = epoch_log["validation_loss"]
             self.model.save(self.save_path)
+
+        # If loss improved, note it
+        if has_loss_improved:
+            self.best_validation_loss = epoch_log["validation_loss"]
 
 
 class EarlyStopping(Callback):

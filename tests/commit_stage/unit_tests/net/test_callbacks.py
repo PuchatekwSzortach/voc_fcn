@@ -12,25 +12,25 @@ def test_model_checkpoint():
     Test ModelCheckpoint callback
     """
 
-    callback = net.callbacks.ModelCheckpoint(save_path=None, verbose=False)
+    callback = net.callbacks.ModelCheckpoint(save_path=None, skip_epochs_count=1, verbose=False)
 
     callback.model = unittest.mock.Mock()
-    callback.on_epoch_end({"validation_loss": 100})
+    callback.on_epoch_end({"epoch_index": 0, "validation_loss": 100})
 
-    # On first epoch we always expect save to be called, as initial loss is assumed to be infinit
-    assert callback.model.save.called
-    callback.on_epoch_end({"validation_loss": 100})
+    # Since we are skipping over first epoch, we expect model.save wasn't called
+    assert not callback.model.save.called
+    callback.on_epoch_end({"epoch_index": 1, "validation_loss": 100})
 
     # Reset mock state, call on_epoch_end with larger loss
     callback.model.reset_mock()
-    callback.on_epoch_end({"validation_loss": 200})
+    callback.on_epoch_end({"epoch_index": 2, "validation_loss": 200})
 
     assert callback.model.save.called is False
     assert callback.best_validation_loss == 100
 
     # Reset mock state, call on_epoch_end with smaller loss
     callback.model.reset_mock()
-    callback.on_epoch_end({"validation_loss": 50})
+    callback.on_epoch_end({"epoch_index": 3, "validation_loss": 50})
 
     assert callback.model.save.called is True
     assert callback.best_validation_loss == 50

@@ -113,6 +113,7 @@ class Model:
             print("Epoch {}/{}".format(epoch_index, configuration["epochs"]))
 
             epoch_log = {
+                "epoch_index": epoch_index,
                 "training_loss": self._train_for_one_epoch(training_data_generator_factory),
                 "validation_loss": self._get_validation_loss(validation_data_generator_factory)
             }

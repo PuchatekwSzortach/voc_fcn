@@ -4,7 +4,6 @@ Script for training FCN net
 
 import argparse
 import sys
-import glob
 
 import yaml
 import tensorflow as tf
@@ -44,7 +43,8 @@ def main():
     session = tf.keras.backend.get_session()
 
     callbacks = [
-        net.callbacks.ModelCheckpoint(config["model_checkpoint_path"]),
+        net.callbacks.ModelCheckpoint(
+            config["model_checkpoint_path"], config["train"]["model_checkpoint_skip_epochs"]),
         net.callbacks.EarlyStopping(config["train"]["early_stopping_patience"]),
         net.callbacks.ReduceLearningRateOnPlateau(
             config["train"]["reduce_learing_rate_patience"],
@@ -53,8 +53,8 @@ def main():
 
     model = net.ml.Model(session, network, categories)
 
-    # Load existing weights if available
-    if len(glob.glob(config["model_checkpoint_path"] + "*")) > 0:
+    # Load previous checkpoint if requested
+    if config["train"]["restore_last_checkpoint"] is True:
 
         print("Loading existing weights")
         model.load(config["model_checkpoint_path"])
