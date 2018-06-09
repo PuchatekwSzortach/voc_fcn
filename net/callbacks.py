@@ -50,7 +50,6 @@ class ModelCheckpoint(Callback):
     def on_epoch_end(self, epoch_log):
 
         has_loss_improved = epoch_log["validation_loss"] < 0.999 * self.best_validation_loss
-
         should_save_model = has_loss_improved and epoch_log["epoch_index"] > self.skip_epochs_count
 
         # Save model if loss improved and we passed skip epochs count
@@ -147,7 +146,7 @@ class ReduceLearningRateOnPlateau(Callback):
             self.epoch_before_patience_runs_out = 0
 
             if self.verbose is True:
-                print("Changed learning rate to {}".format(self.model.learning_rate))
+                print("ReduceLearningRateOnPlateau changed learning rate to {}".format(self.model.learning_rate))
 
 
 class LearningRateScheduler(Callback):
@@ -172,3 +171,6 @@ class LearningRateScheduler(Callback):
         if epoch_log["epoch_index"] in self.schedule:
 
             self.model.learning_rate = self.schedule[epoch_log["epoch_index"]]
+
+            if self.verbose:
+                print("LearningRateScheduler changed learning rate to {}".format(self.model.learning_rate))

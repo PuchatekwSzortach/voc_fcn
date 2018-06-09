@@ -32,11 +32,15 @@ size_factor: 32
 
 train:
     epochs: 40
-    learning_rate: 0.000001
+    learning_rate: 0.0000001
     model_checkpoint_skip_epochs: 1
     early_stopping_patience: 4
     reduce_learning_rate_patience: 1
     reduce_learning_rate_factor: 0.1
     restore_last_checkpoint: true
+
+    learning_rate_schedule:
+      8: 0.000001
+
 
 model_checkpoint_path: "../../data/voc_fcn_model/model"
