@@ -41,18 +41,21 @@ class VOCSamplesGeneratorFactory:
     Factory class creating data batches generators that yield (image, segmentation image) pairs
     """
 
-    def __init__(self, data_directory, data_set_path, size_factor):
+    def __init__(self, data_directory, data_set_path, size_factor, use_augmentation):
         """
         Constructor
         :param data_directory: directory with VOC data
         :param data_set_path: path to list of filenames to be read from from data directory
         :param size_factor: int, value by which height and with of outputs must be divisible
+        :param use_augmentation: bool, triggers data augmentation
         """
 
         self.images_paths_and_segmentations_paths_tuples = \
             get_images_paths_and_segmentations_paths_tuples(data_directory, data_set_path)
 
         self.size_factor = size_factor
+
+        self.use_augmentation = use_augmentation
 
     def get_generator(self):
         """
@@ -79,6 +82,13 @@ class VOCSamplesGeneratorFactory:
                 image = cv2.resize(image, target_size, interpolation=cv2.INTER_CUBIC)
                 segmentation = cv2.resize(segmentation, target_size, interpolation=cv2.INTER_NEAREST)
 
+                if self.use_augmentation:
+
+                    if random.randint(0, 1) == 1:
+
+                        image = cv2.flip(image, flipCode=1)
+                        segmentation = cv2.flip(segmentation, flipCode=1)
+
                 yield image, segmentation
 
     def get_size(self):
@@ -94,16 +104,19 @@ class VOCOneHotEncodedSamplesGeneratorFactory:
     Factory class creating data batches generators that yield (image, segmentation cube) pairs
     """
 
-    def __init__(self, data_directory, data_set_path, size_factor, indices_to_colors_map):
+    def __init__(self, data_directory, data_set_path, size_factor, indices_to_colors_map, use_augmentation):
         """
         Constructor
         :param data_directory: directory with VOC data
         :param data_set_path: path to list of filenames to be read from from data directory
         :param size_factor: int, value by which height and with of outputs must be divisible
         :param indices_to_colors_map: dictionary mapping categories indices to colors
+        :param use_augmentation: bool, triggers data augmentation
         """
 
-        self.voc_samples_generator_factory = VOCSamplesGeneratorFactory(data_directory, data_set_path, size_factor)
+        self.voc_samples_generator_factory = VOCSamplesGeneratorFactory(
+            data_directory, data_set_path, size_factor, use_augmentation)
+
         self.indices_to_colors_map = indices_to_colors_map
 
     def get_generator(self):

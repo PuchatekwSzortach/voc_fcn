@@ -32,29 +32,38 @@ class ModelCheckpoint(Callback):
     Only saves network if its validation loss improved by at least 0.1% over previous result
     """
 
-    def __init__(self, save_path, verbose=True):
+    def __init__(self, save_path, skip_epochs_count, verbose=True):
         """
         Constructor
         :param save_path: prefix for filenames created for the checkpoint
+        :param skip_epochs_count: number of epochs from the start during which callback won't ask model to save itself
         :param verbose: bool, sets callback's verbosity
         """
 
         super().__init__()
 
         self.save_path = save_path
+        self.skip_epochs_count = skip_epochs_count
         self.best_validation_loss = np.inf
         self.verbose = verbose
 
     def on_epoch_end(self, epoch_log):
 
-        if epoch_log["validation_loss"] < 0.999 * self.best_validation_loss:
+        has_loss_improved = epoch_log["validation_loss"] < 0.999 * self.best_validation_loss
+        should_save_model = has_loss_improved and epoch_log["epoch_index"] > self.skip_epochs_count
+
+        # Save model if loss improved and we passed skip epochs count
+        if should_save_model:
 
             if self.verbose:
                 print("Validation loss improved from {} to {}, saving model".format(
                     self.best_validation_loss, epoch_log["validation_loss"]))
 
-            self.best_validation_loss = epoch_log["validation_loss"]
             self.model.save(self.save_path)
+
+        # If loss improved, update our best loss
+        if has_loss_improved:
+            self.best_validation_loss = epoch_log["validation_loss"]
 
 
 class EarlyStopping(Callback):
@@ -137,4 +146,31 @@ class ReduceLearningRateOnPlateau(Callback):
             self.epoch_before_patience_runs_out = 0
 
             if self.verbose is True:
-                print("Changed learning rate to {}".format(self.model.learning_rate))
+                print("ReduceLearningRateOnPlateau changed learning rate to {}".format(self.model.learning_rate))
+
+
+class LearningRateScheduler(Callback):
+    """
+    Callback for setting learning rate at fixed epochs
+    """
+
+    def __init__(self, schedule, verbose):
+        """
+        Constructor
+        :param schedule: dictionary mapping epoch indices to learning rates
+        :param verbose: bool, sets callback's verbosity
+        """
+
+        super().__init__()
+
+        self.schedule = schedule
+        self.verbose = verbose
+
+    def on_epoch_end(self, epoch_log):
+
+        if epoch_log["epoch_index"] in self.schedule:
+
+            self.model.learning_rate = self.schedule[epoch_log["epoch_index"]]
+
+            if self.verbose:
+                print("LearningRateScheduler changed learning rate to {}".format(self.model.learning_rate))

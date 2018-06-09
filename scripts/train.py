@@ -4,7 +4,6 @@ Script for training FCN net
 
 import argparse
 import sys
-import glob
 
 import yaml
 import tensorflow as tf
@@ -32,10 +31,12 @@ def main():
     indices_to_colors_map, _ = net.voc.get_colors_info(len(categories))
 
     training_data_generator_factory = net.voc.VOCOneHotEncodedSamplesGeneratorFactory(
-        config["data_directory"], config["train_set_path"], config["size_factor"], indices_to_colors_map)
+        config["data_directory"], config["train_set_path"], config["size_factor"], indices_to_colors_map,
+        use_augmentation=True)
 
     validation_data_generator_factory = net.voc.VOCOneHotEncodedSamplesGeneratorFactory(
-        config["data_directory"], config["validation_set_path"], config["size_factor"], indices_to_colors_map)
+        config["data_directory"], config["validation_set_path"], config["size_factor"], indices_to_colors_map,
+        use_augmentation=False)
 
     network = net.ml.FullyConvolutionalNetwork(categories_count=len(categories))
 
@@ -44,17 +45,18 @@ def main():
     session = tf.keras.backend.get_session()
 
     callbacks = [
-        net.callbacks.ModelCheckpoint(config["model_checkpoint_path"]),
+        net.callbacks.ModelCheckpoint(
+            config["model_checkpoint_path"], config["train"]["model_checkpoint_skip_epochs"]),
         net.callbacks.EarlyStopping(config["train"]["early_stopping_patience"]),
         net.callbacks.ReduceLearningRateOnPlateau(
-            config["train"]["reduce_learing_rate_patience"],
+            config["train"]["reduce_learning_rate_patience"],
             config["train"]["reduce_learning_rate_factor"])
     ]
 
     model = net.ml.Model(session, network, categories)
 
-    # Load existing weights if available
-    if len(glob.glob(config["model_checkpoint_path"] + "*")) > 0:
+    # Load previous checkpoint if requested
+    if config["train"]["restore_last_checkpoint"] is True:
 
         print("Loading existing weights")
         model.load(config["model_checkpoint_path"])
