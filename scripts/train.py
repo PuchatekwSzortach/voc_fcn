@@ -4,6 +4,7 @@ Script for training FCN net
 
 import argparse
 import sys
+import glob
 
 import yaml
 import tensorflow as tf
@@ -44,10 +45,19 @@ def main():
 
     callbacks = [
         net.callbacks.ModelCheckpoint(config["model_checkpoint_path"]),
-        net.callbacks.EarlyStopping(config["train"]["patience"])
+        net.callbacks.EarlyStopping(config["train"]["early_stopping_patience"]),
+        net.callbacks.ReduceLearningRateOnPlateau(
+            config["train"]["reduce_learing_rate_patience"],
+            config["train"]["reduce_learning_rate_factor"])
     ]
 
     model = net.ml.Model(session, network, categories)
+
+    # Load existing weights if available
+    if len(glob.glob(config["model_checkpoint_path"] + "*")) > 0:
+
+        print("Loading existing weights")
+        model.load(config["model_checkpoint_path"])
 
     uninitialized_variables = set(tf.global_variables()).difference(initialized_variables)
     session.run(tf.variables_initializer(uninitialized_variables))

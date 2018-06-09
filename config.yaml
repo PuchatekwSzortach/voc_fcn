@@ -32,6 +32,8 @@ size_factor: 32
 
 train:
     epochs: 40
-    patience: 4
+    early_stopping_patience: 4
+    reduce_learing_rate_patience: 1
+    reduce_learning_rate_factor: 0.1
 
 model_checkpoint_path: "../../data/voc_fcn_model/model"

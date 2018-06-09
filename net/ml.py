@@ -75,14 +75,19 @@ class Model:
         self.network = network
 
         self.categories_count = len(categories)
-
-        self.labels_placeholder = tf.placeholder(dtype=np.float32, shape=[1, None, None, self.categories_count])
-
-        self.loss_op = tf.losses.softmax_cross_entropy(
-            onehot_labels=self.labels_placeholder, logits=self.network.ops_map["logits"])
-
-        self.train_op = tf.train.AdamOptimizer(learning_rate=0.00001).minimize(self.loss_op)
         self.should_continue_training = None
+        self.learning_rate = 0.00001
+
+        self.ops = {
+            "labels_placeholder": tf.placeholder(dtype=np.float32, shape=[1, None, None, self.categories_count]),
+            "learning_rate_placeholder": tf.placeholder(shape=[], dtype=tf.float32)
+        }
+
+        self.ops["loss_op"] = tf.losses.softmax_cross_entropy(
+            onehot_labels=self.ops["labels_placeholder"], logits=self.network.ops_map["logits"])
+
+        self.ops["train_op"] = tf.train.AdamOptimizer(
+            self.ops["learning_rate_placeholder"]).minimize(self.ops["loss_op"])
 
     def train(self, training_data_generator_factory, validation_data_generator_factory, configuration, callbacks=None):
         """
@@ -138,17 +143,17 @@ class Model:
 
         training_losses = []
 
-        # for _ in tqdm.tqdm(range(10)):
         for _ in tqdm.tqdm(range(training_data_generator_factory.get_size())):
 
             image, segmentation_cube = next(training_data_generator)
 
             feed_dictionary = {
                 self.network.input_placeholder: np.array([image]),
-                self.labels_placeholder: np.array([segmentation_cube], dtype=np.float32),
+                self.ops["labels_placeholder"]: np.array([segmentation_cube], dtype=np.float32),
+                self.ops["learning_rate_placeholder"]: self.learning_rate
             }
 
-            _, loss = self.session.run([self.train_op, self.loss_op], feed_dictionary)
+            _, loss = self.session.run([self.ops["train_op"], self.ops["loss_op"]], feed_dictionary)
             training_losses.append(loss)
 
         return np.mean(training_losses)
@@ -158,17 +163,16 @@ class Model:
         validation_data_generator = validation_data_generator_factory.get_generator()
         validation_losses = []
 
-        # for _ in tqdm.tqdm(range(10)):
         for _ in tqdm.tqdm(range(validation_data_generator_factory.get_size())):
 
             image, segmentation_cube = next(validation_data_generator)
 
             feed_dictionary = {
                 self.network.input_placeholder: np.array([image]),
-                self.labels_placeholder: np.array([segmentation_cube], dtype=np.float32),
+                self.ops["labels_placeholder"]: np.array([segmentation_cube], dtype=np.float32),
             }
 
-            loss = self.session.run(self.loss_op, feed_dictionary)
+            loss = self.session.run(self.ops["loss_op"], feed_dictionary)
             validation_losses.append(loss)
 
         return np.mean(validation_losses)
