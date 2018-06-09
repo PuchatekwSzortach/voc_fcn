@@ -120,3 +120,39 @@ def test_reduce_learning_rate_on_plateau():
     # Two epochs since last change of loss - should adjust loss again
     callback.on_epoch_end({"validation_loss": 50})
     assert callback.model.learning_rate == 0.0625
+
+
+def test_learning_rate_scheduler():
+    """
+    Test for LearningRateScheduler callback
+    """
+
+    schedule = {
+        1: 0.5,
+        3: 0.1,
+        4: 0.0001
+    }
+
+    callback = net.callbacks.LearningRateScheduler(schedule, verbose=False)
+    callback.model = unittest.mock.Mock()
+    callback.model.learning_rate = 1
+
+    # End of epoch 0
+    callback.on_epoch_end({"epoch_index": 0})
+    assert callback.model.learning_rate == 1
+
+    # End of epoch 1
+    callback.on_epoch_end({"epoch_index": 1})
+    assert callback.model.learning_rate == 0.5
+
+    # End of epoch 2
+    callback.on_epoch_end({"epoch_index": 2})
+    assert callback.model.learning_rate == 0.5
+
+    # End of epoch 3
+    callback.on_epoch_end({"epoch_index": 3})
+    assert callback.model.learning_rate == 0.1
+
+    # End of epoch 4
+    callback.on_epoch_end({"epoch_index": 4})
+    assert callback.model.learning_rate == 0.0001

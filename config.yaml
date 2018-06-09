@@ -32,9 +32,10 @@ size_factor: 32
 
 train:
     epochs: 40
+    learning_rate: 0.000001
     model_checkpoint_skip_epochs: 1
     early_stopping_patience: 4
-    reduce_learing_rate_patience: 1
+    reduce_learning_rate_patience: 1
     reduce_learning_rate_factor: 0.1
     restore_last_checkpoint: true
 

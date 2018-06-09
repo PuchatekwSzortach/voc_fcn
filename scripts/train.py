@@ -47,7 +47,7 @@ def main():
             config["model_checkpoint_path"], config["train"]["model_checkpoint_skip_epochs"]),
         net.callbacks.EarlyStopping(config["train"]["early_stopping_patience"]),
         net.callbacks.ReduceLearningRateOnPlateau(
-            config["train"]["reduce_learing_rate_patience"],
+            config["train"]["reduce_learning_rate_patience"],
             config["train"]["reduce_learning_rate_factor"])
     ]
 

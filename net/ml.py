@@ -76,7 +76,7 @@ class Model:
 
         self.categories_count = len(categories)
         self.should_continue_training = None
-        self.learning_rate = 0.00001
+        self.learning_rate = None
 
         self.ops = {
             "labels_placeholder": tf.placeholder(dtype=np.float32, shape=[1, None, None, self.categories_count]),
@@ -100,6 +100,7 @@ class Model:
         :param callbacks: list of callbacks to call at end of each epoch
         """
 
+        self.learning_rate = configuration["learning_rate"]
         self.should_continue_training = True
         epoch_index = 0
 
