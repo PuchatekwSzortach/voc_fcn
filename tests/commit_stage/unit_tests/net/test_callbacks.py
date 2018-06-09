@@ -81,3 +81,42 @@ def test_early_stopping():
     # Loss didn't improve for four epochs - we went over patience period
     callback.on_epoch_end({"validation_loss": 50})
     assert callback.model.should_continue_training is False
+
+
+def test_reduce_learning_rate_on_plateau():
+    """
+    Tests ReduceLearningRateOnPlateau callback
+    """
+
+    callback = net.callbacks.ReduceLearningRateOnPlateau(patience=1, factor=0.25, verbose=False)
+
+    callback.model = unittest.mock.Mock()
+    callback.model.learning_rate = 1
+
+    # Loss improved from infinity
+    callback.on_epoch_end({"validation_loss": 100})
+    assert callback.model.learning_rate == 1
+
+    # Loss didn't improve for one epoch
+    callback.on_epoch_end({"validation_loss": 100})
+    assert callback.model.learning_rate == 1
+
+    # Loss improved
+    callback.on_epoch_end({"validation_loss": 50})
+    assert callback.model.learning_rate == 1
+
+    # Loss didn't improve for one epoch
+    callback.on_epoch_end({"validation_loss": 50})
+    assert callback.model.learning_rate == 1
+
+    # Loss didn't improve for two epochs, callback should change learning rate
+    callback.on_epoch_end({"validation_loss": 50})
+    assert callback.model.learning_rate == 0.25
+
+    # One epoch since last change of loss
+    callback.on_epoch_end({"validation_loss": 50})
+    assert callback.model.learning_rate == 0.25
+
+    # Two epochs since last change of loss - should adjust loss again
+    callback.on_epoch_end({"validation_loss": 50})
+    assert callback.model.learning_rate == 0.0625
