@@ -4,8 +4,10 @@ Module with various utilities
 
 import os
 import logging
+import random
 
 import numpy as np
+import cv2
 
 
 def get_logger(path):
@@ -128,3 +130,31 @@ def get_categories_segmentations_maps(segmentation_cube, ids_to_categories_map):
             categories_segmentations_map[category] = segmentation
 
     return categories_segmentations_map
+
+
+class DataAugmenter:
+    """
+    Simple class for data augmentation
+    """
+
+    @staticmethod
+    def augment_samples(image, segmentation):
+        """
+        Performs random augmentations on copies of inputs and returns them
+        :param image: numpy array
+        :param segmentation: numpy array
+        :return: tuple (augmented image, augmented segmentation)
+        """
+
+        # Random flip around horizontal axis
+        if random.randint(0, 1) == 1:
+            image = cv2.flip(image, flipCode=0)
+            segmentation = cv2.flip(segmentation, flipCode=0)
+
+        # Random flip around vertical axis
+        if random.randint(0, 1) == 1:
+            image = cv2.flip(image, flipCode=1)
+            segmentation = cv2.flip(segmentation, flipCode=1)
+
+        return image, segmentation
+

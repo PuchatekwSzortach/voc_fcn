@@ -31,12 +31,12 @@ def main():
     indices_to_colors_map, _ = net.voc.get_colors_info(len(categories))
 
     training_data_generator_factory = net.voc.VOCOneHotEncodedSamplesGeneratorFactory(
-        config["data_directory"], config["train_set_path"], config["size_factor"], indices_to_colors_map,
-        use_augmentation=True)
+        config["voc"]["data_directory"], config["voc"]["train_set_path"],
+        config["size_factor"], indices_to_colors_map, use_augmentation=True)
 
     validation_data_generator_factory = net.voc.VOCOneHotEncodedSamplesGeneratorFactory(
-        config["data_directory"], config["validation_set_path"], config["size_factor"], indices_to_colors_map,
-        use_augmentation=False)
+        config["voc"]["data_directory"], config["voc"]["validation_set_path"],
+        config["size_factor"], indices_to_colors_map, use_augmentation=False)
 
     network = net.ml.FullyConvolutionalNetwork(categories_count=len(categories))
 

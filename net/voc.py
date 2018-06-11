@@ -84,10 +84,7 @@ class VOCSamplesGeneratorFactory:
 
                 if self.use_augmentation:
 
-                    if random.randint(0, 1) == 1:
-
-                        image = cv2.flip(image, flipCode=1)
-                        segmentation = cv2.flip(segmentation, flipCode=1)
+                    image, segmentation = net.utilities.DataAugmenter.augment_samples(image, segmentation)
 
                 yield image, segmentation
 
