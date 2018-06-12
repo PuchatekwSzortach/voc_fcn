@@ -37,7 +37,7 @@ def log_voc_samples_generator_output(logger, config):
     ids_to_colors_map, void_color = net.data.get_colors_info(len(config["categories"]))
     ids_to_categories_map = net.utilities.get_ids_to_values_map(config["categories"])
 
-    for _ in tqdm.tqdm(range(10)):
+    for _ in tqdm.tqdm(range(40)):
 
         image, segmentation = next(generator)
 

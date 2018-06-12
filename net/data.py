@@ -153,6 +153,47 @@ class VOCOneHotEncodedSamplesGeneratorFactory:
         return self.voc_samples_generator_factory.get_size()
 
 
+class VOCOneHotEncodedSamplesGeneratorFactoryTwo:
+    """
+    Factory class creating data batches generators that yield (image, segmentation cube) pairs
+    """
+
+    def __init__(self, voc_samples_generator_factory, indices_to_colors_map):
+        """
+        Constructor
+        :param voc_samples_generator_factory: factory that creates generator yielding (image, segmentation) tuples
+        from VOC dataset
+        :param indices_to_colors_map: dictionary mapping categories indices to colors
+        """
+
+        self.voc_samples_generator_factory = voc_samples_generator_factory
+        self.indices_to_colors_map = indices_to_colors_map
+
+    def get_generator(self):
+        """
+        Returns generator that yields (image_path, segmentation_image) pair on each yield
+
+        :return: generator
+        """
+
+        samples_generator = self.voc_samples_generator_factory.get_generator()
+
+        while True:
+
+            image, segmentation = next(samples_generator)
+
+            segmentation_cube = get_segmentation_cube(segmentation, self.indices_to_colors_map)
+            yield image, segmentation_cube
+
+    def get_size(self):
+        """
+        Gets size of dataset served by the generator
+        :return: int
+        """
+
+        return self.voc_samples_generator_factory.get_size()
+
+
 def get_colors_info(categories_count):
     """
     Get ids to colors dictionary and void color.
@@ -275,6 +316,7 @@ class CombinedPASCALDatasetsGeneratorFactory:
         self.use_augmentation = use_augmentation
 
         self.indices_to_colors_map, self.void_color = get_colors_info(categories_count)
+        self.combined_datasets_filenames = self._get_combined_datasets_filenames()
 
     def get_generator(self):
         """
@@ -282,7 +324,7 @@ class CombinedPASCALDatasetsGeneratorFactory:
         :return: generator
         """
 
-        combined_datasets_filenames = self._get_combined_datasets_filename()
+        local_combined_datasets_filenames = copy.deepcopy(self.combined_datasets_filenames)
 
         sample_getters_map = {
             "voc": self._get_voc_sample,
@@ -291,9 +333,9 @@ class CombinedPASCALDatasetsGeneratorFactory:
 
         while True:
 
-            random.shuffle(combined_datasets_filenames)
+            random.shuffle(local_combined_datasets_filenames)
 
-            for dataset, filename in combined_datasets_filenames:
+            for dataset, filename in local_combined_datasets_filenames:
 
                 image, segmentation = sample_getters_map[dataset](filename)
 
@@ -309,7 +351,14 @@ class CombinedPASCALDatasetsGeneratorFactory:
 
                 yield image, segmentation
 
-    def _get_combined_datasets_filename(self):
+    def get_size(self):
+        """
+        Gets size of dataset served by the generator
+        :return: int
+        """
+        return len(self.combined_datasets_filenames)
+
+    def _get_combined_datasets_filenames(self):
 
         # Remove from hariharan images that appear in voc
         voc_filenames_list = get_dataset_filenames(
