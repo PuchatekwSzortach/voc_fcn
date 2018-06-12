@@ -153,3 +153,13 @@ class DataAugmenter:
 
         return image, segmentation
 
+
+def get_uint8_images(images):
+    """
+    Converts a list of float images to uint8, making sure to scale up their brighness.
+    :param images: list of numpy arrays
+    :return: list of numpy arrays
+    """
+
+    brightness_adjusted_images = [255 * image for image in images]
+    return [image.astype(np.uint8) for image in brightness_adjusted_images]

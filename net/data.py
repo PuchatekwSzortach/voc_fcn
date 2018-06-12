@@ -7,8 +7,8 @@ import random
 import copy
 
 import numpy as np
-import cv2
 import scipy.io
+import cv2
 
 import net.utilities
 
@@ -260,6 +260,14 @@ class CombinedPASCALDatasetsGeneratorFactory:
     """
 
     def __init__(self, voc_config, hariharan_config, size_factor, categories_count, use_augmentation):
+        """
+        Constructor
+        :param voc_config: dictionary with voc dataset paths
+        :param hariharan_config: dictionary with Hariharan's PASCAL dataset paths
+        :param size_factor: int, value by which height and with of outputs must be divisible
+        :param categories_count: int, number of categories in the datasets
+        :param use_augmentation: bool, controls data augmentation
+        """
 
         self.voc_config = voc_config
         self.hariharan_config = hariharan_config
@@ -269,6 +277,10 @@ class CombinedPASCALDatasetsGeneratorFactory:
         self.indices_to_colors_map, self.void_color = get_colors_info(categories_count)
 
     def get_generator(self):
+        """
+        Returns generator that yields (image, segmentation) tuple on each yield.
+        :return: generator
+        """
 
         combined_datasets_filenames = self._get_combined_datasets_filename()
 

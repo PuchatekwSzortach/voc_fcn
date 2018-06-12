@@ -41,15 +41,15 @@ def log_voc_samples_generator_output(logger, config):
 
         image, segmentation = next(generator)
 
-        void_mask = net.data.get_void_mask(segmentation, void_color)
         segmentation_cube = net.data.get_segmentation_cube(segmentation, ids_to_colors_map)
 
-        categories_segementations_map = net.utilities.get_categories_segmentations_maps(
-            segmentation_cube, ids_to_categories_map)
+        categories, segmentation_layers = zip(*net.utilities.get_categories_segmentations_maps(
+            segmentation_cube, ids_to_categories_map).items())
 
-        categories, segmentation_layers = zip(*categories_segementations_map.items())
+        images_to_display = \
+            [image, segmentation, 255 * net.data.get_void_mask(segmentation, void_color)] + \
+            net.utilities.get_uint8_images(segmentation_layers)
 
-        images_to_display = [image, segmentation, 255 * void_mask] + [255 * image for image in segmentation_layers]
         logger.info(vlogging.VisualRecord("Data", images_to_display, footnotes=str(["void"] + list(categories))))
 
 
