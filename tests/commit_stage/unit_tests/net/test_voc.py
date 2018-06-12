@@ -4,7 +4,7 @@ Tests for net.voc module
 
 import numpy as np
 
-import net.voc
+import net.data
 
 
 def test_get_void_mask():
@@ -22,7 +22,7 @@ def test_get_void_mask():
     expected = np.zeros((10, 10), dtype=np.int32)
     expected[8:, 7:] = 1
 
-    actual = net.voc.get_void_mask(segmentation_image, void_color)
+    actual = net.data.get_void_mask(segmentation_image, void_color)
 
     assert np.all(expected == actual)
 
@@ -51,7 +51,7 @@ def test_get_segmentation_cube():
     expected[3:5, 7:, 1] = 1
     expected[7, 1:4, 3] = 1
 
-    actual = net.voc.get_segmentation_cube(segmentation_image, indices_to_colors_map)
+    actual = net.data.get_segmentation_cube(segmentation_image, indices_to_colors_map)
 
     assert np.all(expected == actual)
 
@@ -86,7 +86,7 @@ def test_get_segmentation_image_binary_segmentation_cube_values():
     expected[4:8, 2:6] = indices_to_colors_map[2]
     expected[4:8, 8:10] = indices_to_colors_map[3]
 
-    actual = net.voc.get_segmentation_image(segmentation_cube, indices_to_colors_map, void_color)
+    actual = net.data.get_segmentation_image(segmentation_cube, indices_to_colors_map, void_color)
 
     assert np.all(expected == actual)
 
@@ -140,6 +140,6 @@ def test_get_segmentation_image_float_segmentation_cube_values():
     expected[5:7, 2:4] = indices_to_colors_map[2]
     expected[8:10, 7:9] = indices_to_colors_map[3]
 
-    actual = net.voc.get_segmentation_image(segmentation_cube, indices_to_colors_map, void_color)
+    actual = net.data.get_segmentation_image(segmentation_cube, indices_to_colors_map, void_color)
 
     assert np.all(expected == actual)

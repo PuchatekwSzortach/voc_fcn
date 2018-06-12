@@ -146,11 +146,6 @@ class DataAugmenter:
         :return: tuple (augmented image, augmented segmentation)
         """
 
-        # Random flip around horizontal axis
-        if random.randint(0, 1) == 1:
-            image = cv2.flip(image, flipCode=0)
-            segmentation = cv2.flip(segmentation, flipCode=0)
-
         # Random flip around vertical axis
         if random.randint(0, 1) == 1:
             image = cv2.flip(image, flipCode=1)

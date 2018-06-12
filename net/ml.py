@@ -8,7 +8,7 @@ import tensorflow as tf
 import numpy as np
 import tqdm
 
-import net.voc
+import net.data
 import net.utilities
 
 
