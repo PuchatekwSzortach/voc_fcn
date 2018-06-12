@@ -1,5 +1,5 @@
 """
-Code with VOC-specific functionality
+Data generators and other data-related code
 """
 
 import os
@@ -7,9 +7,23 @@ import random
 import copy
 
 import numpy as np
+import scipy.io
 import cv2
 
 import net.utilities
+
+
+def get_dataset_filenames(data_directory, data_set_path):
+    """
+    Get a list of filenames for the dataset
+    :param data_directory: path to data directory
+    :param data_set_path: path to file containing dataset filenames. This path is relative to data_directory
+    :return: list of strings, filenames of images used in dataset
+    """
+
+    with open(os.path.join(data_directory, data_set_path)) as file:
+
+        return [line.strip() for line in file.readlines()]
 
 
 def get_images_paths_and_segmentations_paths_tuples(data_directory, data_set_path):
@@ -20,9 +34,7 @@ def get_images_paths_and_segmentations_paths_tuples(data_directory, data_set_pat
     :return: list of tuples
     """
 
-    with open(os.path.join(data_directory, data_set_path)) as file:
-
-        file_stems = [line.strip() for line in file.readlines()]
+    file_stems = get_dataset_filenames(data_directory, data_set_path)
 
     images_paths_and_segmentation_paths_tuples = []
 
@@ -84,10 +96,7 @@ class VOCSamplesGeneratorFactory:
 
                 if self.use_augmentation:
 
-                    if random.randint(0, 1) == 1:
-
-                        image = cv2.flip(image, flipCode=1)
-                        segmentation = cv2.flip(segmentation, flipCode=1)
+                    image, segmentation = net.utilities.DataAugmenter.augment_samples(image, segmentation)
 
                 yield image, segmentation
 
@@ -242,3 +251,102 @@ def get_segmentation_image(segmentation_cube, indices_to_colors_map, void_color)
         image[pixels_to_draw] = color
 
     return image
+
+
+class CombinedPASCALDatasetsGeneratorFactory:
+    """
+    Factory class that merges VOC 2012 and Hariharan's PASCAL datasets.
+    Builds a generator for that returns (image, segmentation) tuples.
+    """
+
+    def __init__(self, voc_config, hariharan_config, size_factor, categories_count, use_augmentation):
+        """
+        Constructor
+        :param voc_config: dictionary with voc dataset paths
+        :param hariharan_config: dictionary with Hariharan's PASCAL dataset paths
+        :param size_factor: int, value by which height and with of outputs must be divisible
+        :param categories_count: int, number of categories in the datasets
+        :param use_augmentation: bool, controls data augmentation
+        """
+
+        self.voc_config = voc_config
+        self.hariharan_config = hariharan_config
+        self.size_factor = size_factor
+        self.use_augmentation = use_augmentation
+
+        self.indices_to_colors_map, self.void_color = get_colors_info(categories_count)
+
+    def get_generator(self):
+        """
+        Returns generator that yields (image, segmentation) tuple on each yield.
+        :return: generator
+        """
+
+        combined_datasets_filenames = self._get_combined_datasets_filename()
+
+        sample_getters_map = {
+            "voc": self._get_voc_sample,
+            "hariharan": self._get_hariharan_sample
+        }
+
+        while True:
+
+            random.shuffle(combined_datasets_filenames)
+
+            for dataset, filename in combined_datasets_filenames:
+
+                image, segmentation = sample_getters_map[dataset](filename)
+
+                target_size = net.utilities.get_target_image_size(image.shape[:2], self.size_factor)
+                target_size = target_size[1], target_size[0]
+
+                image = cv2.resize(image, target_size, interpolation=cv2.INTER_CUBIC)
+                segmentation = cv2.resize(segmentation, target_size, interpolation=cv2.INTER_NEAREST)
+
+                if self.use_augmentation:
+
+                    image, segmentation = net.utilities.DataAugmenter.augment_samples(image, segmentation)
+
+                yield image, segmentation
+
+    def _get_combined_datasets_filename(self):
+
+        # Remove from hariharan images that appear in voc
+        voc_filenames_list = get_dataset_filenames(
+            self.voc_config["data_directory"], self.voc_config["data_set_path"])
+
+        hariharan_filenames_list = get_dataset_filenames(
+            self.hariharan_config["data_directory"], self.hariharan_config["data_set_path"])
+
+        # hariharan's files that don't appear in voc
+        unique_hariharan_filenames_list = list(set(hariharan_filenames_list).difference(voc_filenames_list))
+
+        combined_datasets_filenames = \
+            [("voc", filename) for filename in voc_filenames_list] + \
+            [("hariharan", filename) for filename in unique_hariharan_filenames_list]
+
+        return combined_datasets_filenames
+
+    def _get_voc_sample(self, filename):
+
+        image_path = os.path.join(self.voc_config["data_directory"], "JPEGImages/{}.jpg".format(filename))
+        segmentation_path = os.path.join(self.voc_config["data_directory"], "SegmentationClass/{}.png".format(filename))
+
+        return cv2.imread(image_path), cv2.imread(segmentation_path)
+
+    def _get_hariharan_sample(self, filename):
+
+        image_path = os.path.join(self.hariharan_config["data_directory"], "dataset/img", filename + ".jpg")
+        image = cv2.imread(image_path)
+
+        segmentation_path = os.path.join(self.hariharan_config["data_directory"], "dataset/cls", filename + ".mat")
+        segmentation_data = scipy.io.loadmat(segmentation_path)
+        segmentation_matrix = segmentation_data["GTcls"][0][0][1]
+
+        segmentation = self.void_color * np.ones(shape=image.shape, dtype=np.uint8)
+
+        for category_index in set(segmentation_matrix.reshape(-1)):
+
+            segmentation[segmentation_matrix == category_index] = self.indices_to_colors_map[category_index]
+
+        return image, segmentation

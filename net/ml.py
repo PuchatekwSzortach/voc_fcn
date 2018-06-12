@@ -8,7 +8,7 @@ import tensorflow as tf
 import numpy as np
 import tqdm
 
-import net.voc
+import net.data
 import net.utilities
 
 
@@ -32,29 +32,45 @@ class FullyConvolutionalNetwork:
             "block5_pool": vgg.get_layer("block5_pool").output,
         }
 
+        self.ops_map["main_head"] = tf.keras.layers.Conv2D(
+            categories_count, kernel_size=(1, 1), activation=tf.nn.swish, padding="same")(self.ops_map["block5_pool"])
+
         self.ops_map["main_head"] = tf.keras.layers.Conv2DTranspose(
-            512, kernel_size=(4, 4), strides=(2, 2), activation=tf.nn.swish,
-            kernel_initializer=net.utilities.bilinear_initializer)(self.ops_map["block5_pool"])
+            categories_count, kernel_size=(4, 4), strides=(2, 2), activation=tf.nn.swish,
+            kernel_initializer=net.utilities.bilinear_initializer)(self.ops_map["main_head"])
 
         self.ops_map["main_head"] = tf.keras.layers.Cropping2D(cropping=((1, 1), (1, 1)))(self.ops_map["main_head"])
         self.ops_map["main_head"] = tf.Variable(1, dtype=tf.float32) * self.ops_map["main_head"]
 
-        self.ops_map["main_head"] = self.ops_map["main_head"] + self.ops_map["block4_pool"]
+        self.ops_map["block4_head"] = tf.keras.layers.Conv2D(
+            categories_count, kernel_size=(3, 3), activation=tf.nn.swish, padding="same")(self.ops_map["block4_pool"])
+
+        self.ops_map["main_head"] = self.ops_map["main_head"] + self.ops_map["block4_head"]
+
+        self.ops_map["main_head"] = tf.keras.layers.Conv2D(
+            categories_count, kernel_size=(1, 1), activation=tf.nn.swish, padding="same")(self.ops_map["main_head"])
 
         self.ops_map["main_head"] = tf.keras.layers.Conv2DTranspose(
-            256, kernel_size=(4, 4), strides=(2, 2), activation=tf.nn.swish,
+            categories_count, kernel_size=(4, 4), strides=(2, 2), activation=tf.nn.swish,
             kernel_initializer=net.utilities.bilinear_initializer)(self.ops_map["main_head"])
 
         self.ops_map["main_head"] = tf.keras.layers.Cropping2D(cropping=((1, 1), (1, 1)))(self.ops_map["main_head"])
         self.ops_map["main_head"] = tf.Variable(0.01, dtype=tf.float32) * self.ops_map["main_head"]
 
-        self.ops_map["main_head"] = self.ops_map["main_head"] + self.ops_map["block3_pool"]
+        self.ops_map["block3_head"] = tf.keras.layers.Conv2D(
+            categories_count, kernel_size=(3, 3), activation=tf.nn.swish, padding="same")(self.ops_map["block3_pool"])
+
+        self.ops_map["main_head"] = self.ops_map["main_head"] + self.ops_map["block3_head"]
+
+        self.ops_map["main_head"] = tf.keras.layers.Conv2D(
+            categories_count, kernel_size=(1, 1), activation=tf.nn.swish, padding="same")(self.ops_map["main_head"])
 
         self.ops_map["main_head"] = tf.keras.layers.Conv2DTranspose(
-            categories_count, kernel_size=(16, 16), strides=(8, 8),
+            categories_count, kernel_size=(16, 16), strides=(8, 8), activation=tf.nn.swish,
             kernel_initializer=net.utilities.bilinear_initializer)(self.ops_map["main_head"])
 
         self.ops_map["logits"] = tf.keras.layers.Cropping2D(cropping=((4, 4), (4, 4)))(self.ops_map["main_head"])
+
         self.ops_map["predictions"] = tf.nn.softmax(self.ops_map["logits"], axis=-1)
 
 

@@ -1,6 +1,12 @@
-data_directory: "../../data/VOC2012"
-train_set_path: "ImageSets/Segmentation/train.txt"
-validation_set_path: "ImageSets/Segmentation/val.txt"
+voc:
+  data_directory: "../../data/VOC2012"
+  train_set_path: "ImageSets/Segmentation/train.txt"
+  validation_set_path: "ImageSets/Segmentation/val.txt"
+
+hariharan:
+  data_directory: "../../data/hariharan_semantic_contours_dataset"
+  train_set_path: "dataset/train_noval.txt"
+  validation_set_path: "dataset/val.txt"
 
 categories:
     ['background',
@@ -32,15 +38,15 @@ size_factor: 32
 
 train:
     epochs: 40
-    learning_rate: 0.0000001
+    learning_rate: 0.00001
     model_checkpoint_skip_epochs: 1
     early_stopping_patience: 4
     reduce_learning_rate_patience: 1
     reduce_learning_rate_factor: 0.1
-    restore_last_checkpoint: true
+    restore_last_checkpoint: false
 
     learning_rate_schedule:
-      8: 0.000001
+      8: 0.0000001
 
 
 model_checkpoint_path: "../../data/voc_fcn_model/model"

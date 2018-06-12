@@ -50,7 +50,7 @@ class ModelCheckpoint(Callback):
     def on_epoch_end(self, epoch_log):
 
         has_loss_improved = epoch_log["validation_loss"] < 0.999 * self.best_validation_loss
-        should_save_model = has_loss_improved and epoch_log["epoch_index"] > self.skip_epochs_count
+        should_save_model = has_loss_improved and epoch_log["epoch_index"] >= self.skip_epochs_count
 
         # Save model if loss improved and we passed skip epochs count
         if should_save_model:

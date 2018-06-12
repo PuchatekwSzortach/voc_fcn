@@ -8,7 +8,7 @@ import sys
 import yaml
 import tensorflow as tf
 
-import net.voc
+import net.data
 import net.ml
 import net.callbacks
 
@@ -28,15 +28,15 @@ def main():
 
     categories = config["categories"]
 
-    indices_to_colors_map, _ = net.voc.get_colors_info(len(categories))
+    indices_to_colors_map, _ = net.data.get_colors_info(len(categories))
 
-    training_data_generator_factory = net.voc.VOCOneHotEncodedSamplesGeneratorFactory(
-        config["data_directory"], config["train_set_path"], config["size_factor"], indices_to_colors_map,
-        use_augmentation=True)
+    training_data_generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactory(
+        config["voc"]["data_directory"], config["voc"]["train_set_path"],
+        config["size_factor"], indices_to_colors_map, use_augmentation=True)
 
-    validation_data_generator_factory = net.voc.VOCOneHotEncodedSamplesGeneratorFactory(
-        config["data_directory"], config["validation_set_path"], config["size_factor"], indices_to_colors_map,
-        use_augmentation=False)
+    validation_data_generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactory(
+        config["voc"]["data_directory"], config["voc"]["validation_set_path"],
+        config["size_factor"], indices_to_colors_map, use_augmentation=False)
 
     network = net.ml.FullyConvolutionalNetwork(categories_count=len(categories))
 
