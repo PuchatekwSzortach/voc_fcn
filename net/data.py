@@ -5,6 +5,7 @@ Data generators and other data-related code
 import os
 import random
 import copy
+import collections
 
 import numpy as np
 import scipy.io
@@ -113,51 +114,6 @@ class VOCOneHotEncodedSamplesGeneratorFactory:
     Factory class creating data batches generators that yield (image, segmentation cube) pairs
     """
 
-    def __init__(self, data_directory, data_set_path, size_factor, indices_to_colors_map, use_augmentation):
-        """
-        Constructor
-        :param data_directory: directory with VOC data
-        :param data_set_path: path to list of filenames to be read from from data directory
-        :param size_factor: int, value by which height and with of outputs must be divisible
-        :param indices_to_colors_map: dictionary mapping categories indices to colors
-        :param use_augmentation: bool, triggers data augmentation
-        """
-
-        self.voc_samples_generator_factory = VOCSamplesGeneratorFactory(
-            data_directory, data_set_path, size_factor, use_augmentation)
-
-        self.indices_to_colors_map = indices_to_colors_map
-
-    def get_generator(self):
-        """
-        Returns generator that yields (image_path, segmentation_image) pair on each yield
-
-        :return: generator
-        """
-
-        voc_samples_generator = self.voc_samples_generator_factory.get_generator()
-
-        while True:
-
-            image, segmentation = next(voc_samples_generator)
-
-            segmentation_cube = get_segmentation_cube(segmentation, self.indices_to_colors_map)
-            yield image, segmentation_cube
-
-    def get_size(self):
-        """
-        Gets size of dataset served by the generator
-        :return: int
-        """
-
-        return self.voc_samples_generator_factory.get_size()
-
-
-class VOCOneHotEncodedSamplesGeneratorFactoryTwo:
-    """
-    Factory class creating data batches generators that yield (image, segmentation cube) pairs
-    """
-
     def __init__(self, voc_samples_generator_factory, indices_to_colors_map):
         """
         Constructor
@@ -184,6 +140,60 @@ class VOCOneHotEncodedSamplesGeneratorFactoryTwo:
 
             segmentation_cube = get_segmentation_cube(segmentation, self.indices_to_colors_map)
             yield image, segmentation_cube
+
+    def get_size(self):
+        """
+        Gets size of dataset served by the generator
+        :return: int
+        """
+
+        return self.voc_samples_generator_factory.get_size()
+
+
+class VOCOneHotEncodedSamplesGeneratorFactoryTwo:
+    """
+    Factory class creating data batches generators that yield (image, segmentation cube) pairs
+    """
+
+    def __init__(self, voc_samples_generator_factory, indices_to_colors_map, batch_size):
+        """
+        Constructor
+        :param voc_samples_generator_factory: factory that creates generator yielding (image, segmentation) tuples
+        from VOC dataset
+        :param indices_to_colors_map: dictionary mapping categories indices to colors
+        :param batch_size: int, specifies size of batches yielded by generator
+        """
+
+        self.voc_samples_generator_factory = voc_samples_generator_factory
+        self.indices_to_colors_map = indices_to_colors_map
+        self.batch_size = batch_size
+
+    def get_generator(self):
+        """
+        Returns generator that yields (image_path, segmentation_image) pair on each yield
+
+        :return: generator
+        """
+
+        samples_generator = self.voc_samples_generator_factory.get_generator()
+
+        images_batches_map = collections.defaultdict(list)
+        segmentations_cubes_batches_map = collections.defaultdict(list)
+
+        while True:
+
+            image, segmentation = next(samples_generator)
+            segmentation_cube = get_segmentation_cube(segmentation, self.indices_to_colors_map)
+
+            images_batches_map[image.shape].append(image)
+            segmentations_cubes_batches_map[image.shape].append(segmentation_cube)
+
+            if len(images_batches_map[image.shape]) == self.batch_size:
+
+                yield np.array(images_batches_map[image.shape]), np.array(segmentations_cubes_batches_map[image.shape])
+
+                images_batches_map[image.shape].clear()
+                segmentations_cubes_batches_map[image.shape].clear()
 
     def get_size(self):
         """

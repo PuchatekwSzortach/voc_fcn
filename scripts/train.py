@@ -40,14 +40,14 @@ def get_data_generators_factories(config):
         len(config["categories"]), use_augmentation=True)
 
     training_data_generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactoryTwo(
-        training_data_segmentation_samples_generator_factory, indices_to_colors_map)
+        training_data_segmentation_samples_generator_factory, indices_to_colors_map, config["train"]["batch_size"])
 
     validation_data_segmentation_samples_generator_factory = net.data.VOCSamplesGeneratorFactory(
         config["voc"]["data_directory"], config["voc"]["validation_set_path"], config["size_factor"],
         use_augmentation=False)
 
     validation_data_generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactoryTwo(
-        validation_data_segmentation_samples_generator_factory, indices_to_colors_map)
+        validation_data_segmentation_samples_generator_factory, indices_to_colors_map, config["train"]["batch_size"])
 
     return training_data_generator_factory, validation_data_generator_factory
 

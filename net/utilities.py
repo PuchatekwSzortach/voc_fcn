@@ -153,6 +153,38 @@ class DataAugmenter:
 
         return image, segmentation
 
+    @staticmethod
+    def rotate_samples(image, segmentation, void_color):
+        """
+        Performs random rotation around a random point near image center
+        :param image: numpy array
+        :param segmentation: numpy array
+        :param void_color: 3-elements tuple of integers, color with which blank areas of rotated segmentation map
+        should be filled in
+        :return: tuple (rotated image, rotated segmentation)
+        """
+
+        width = image.shape[1]
+        height = image.shape[0]
+
+        x = random.randint(int(0.25 * width), int(0.75 * width))
+        y = random.randint(int(0.25 * height), int(0.75 * height))
+
+        angle = random.randint(-15, 15)
+
+        rotation_matrix = cv2.getRotationMatrix2D((x, y), angle, scale=1)
+
+        augmented_image = cv2.warpAffine(image, rotation_matrix, (width, height), flags=cv2.INTER_NEAREST)
+
+        # We need to convert channel values from np.int64 to int to make OpenCV happy
+        void_color_tuple = [int(channel_value) for channel_value in void_color]
+
+        augmented_segmentation = cv2.warpAffine(
+            segmentation.astype(np.uint8), rotation_matrix, (width, height),
+            flags=cv2.INTER_NEAREST, borderValue=void_color_tuple)
+
+        return augmented_image, augmented_segmentation
+
 
 def get_uint8_images(images):
     """

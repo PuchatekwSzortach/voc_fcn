@@ -41,6 +41,8 @@ def log_voc_samples_generator_output(logger, config):
 
         image, segmentation = next(generator)
 
+        image, segmentation = net.utilities.DataAugmenter.rotate_samples(image, segmentation, void_color)
+
         segmentation_cube = net.data.get_segmentation_cube(segmentation, ids_to_colors_map)
 
         categories, segmentation_layers = zip(*net.utilities.get_categories_segmentations_maps(
@@ -60,9 +62,12 @@ def log_one_hot_encoded_voc_samples_generator_output(logger, configuration):
 
     indices_to_colors_map, void_color = net.data.get_colors_info(len(configuration["categories"]))
 
-    generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactory(
+    data_segmentation_samples_generator_factory = net.data.VOCSamplesGeneratorFactory(
         configuration["voc"]["data_directory"], configuration["voc"]["validation_set_path"],
-        configuration["size_factor"], indices_to_colors_map, use_augmentation=False)
+        configuration["size_factor"], use_augmentation=False)
+
+    generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactory(
+        data_segmentation_samples_generator_factory, indices_to_colors_map)
 
     generator = generator_factory.get_generator()
 
