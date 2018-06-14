@@ -17,7 +17,7 @@ def get_data_generators_factories(config):
     """
     Simple helper to prepare data generators factories used to train model
     :param config: script configuration object
-    :return: two instances of VOCOneHotEncodedSamplesGeneratorFactoryTwo, one configured for training
+    :return: two instances of VOCOneHotEncodedSamplesGeneratorFactory, one configured for training
     and one configured for validation
     """
 
@@ -39,15 +39,15 @@ def get_data_generators_factories(config):
         voc_train_config, hariharan_train_config, config["size_factor"],
         len(config["categories"]), use_augmentation=True)
 
-    training_data_generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactoryTwo(
-        training_data_segmentation_samples_generator_factory, indices_to_colors_map)
+    training_data_generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactory(
+        training_data_segmentation_samples_generator_factory, indices_to_colors_map, config["train"]["batch_size"])
 
     validation_data_segmentation_samples_generator_factory = net.data.VOCSamplesGeneratorFactory(
         config["voc"]["data_directory"], config["voc"]["validation_set_path"], config["size_factor"],
         use_augmentation=False)
 
-    validation_data_generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactoryTwo(
-        validation_data_segmentation_samples_generator_factory, indices_to_colors_map)
+    validation_data_generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactory(
+        validation_data_segmentation_samples_generator_factory, indices_to_colors_map, config["train"]["batch_size"])
 
     return training_data_generator_factory, validation_data_generator_factory
 

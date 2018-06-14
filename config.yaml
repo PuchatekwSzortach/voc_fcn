@@ -35,10 +35,10 @@ log_path: "/tmp/voc_fcn.html"
 
 size_factor: 32
 
-
 train:
     epochs: 40
     learning_rate: 0.00001
+    batch_size: 1
     model_checkpoint_skip_epochs: 1
     early_stopping_patience: 4
     reduce_learning_rate_patience: 1

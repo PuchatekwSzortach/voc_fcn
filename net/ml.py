@@ -33,37 +33,37 @@ class FullyConvolutionalNetwork:
         }
 
         self.ops_map["main_head"] = tf.keras.layers.Conv2D(
-            categories_count, kernel_size=(1, 1), activation=tf.nn.swish, padding="same")(self.ops_map["block5_pool"])
+            64, kernel_size=(1, 1), activation=tf.nn.swish, padding="same")(self.ops_map["block5_pool"])
 
         self.ops_map["main_head"] = tf.keras.layers.Conv2DTranspose(
-            categories_count, kernel_size=(4, 4), strides=(2, 2), activation=tf.nn.swish,
+            64, kernel_size=(4, 4), strides=(2, 2), activation=tf.nn.swish,
             kernel_initializer=net.utilities.bilinear_initializer)(self.ops_map["main_head"])
 
         self.ops_map["main_head"] = tf.keras.layers.Cropping2D(cropping=((1, 1), (1, 1)))(self.ops_map["main_head"])
         self.ops_map["main_head"] = tf.Variable(1, dtype=tf.float32) * self.ops_map["main_head"]
 
         self.ops_map["block4_head"] = tf.keras.layers.Conv2D(
-            categories_count, kernel_size=(3, 3), activation=tf.nn.swish, padding="same")(self.ops_map["block4_pool"])
+            64, kernel_size=(3, 3), activation=tf.nn.swish, padding="same")(self.ops_map["block4_pool"])
 
         self.ops_map["main_head"] = self.ops_map["main_head"] + self.ops_map["block4_head"]
 
         self.ops_map["main_head"] = tf.keras.layers.Conv2D(
-            categories_count, kernel_size=(1, 1), activation=tf.nn.swish, padding="same")(self.ops_map["main_head"])
+            64, kernel_size=(1, 1), activation=tf.nn.swish, padding="same")(self.ops_map["main_head"])
 
         self.ops_map["main_head"] = tf.keras.layers.Conv2DTranspose(
-            categories_count, kernel_size=(4, 4), strides=(2, 2), activation=tf.nn.swish,
+            64, kernel_size=(4, 4), strides=(2, 2), activation=tf.nn.swish,
             kernel_initializer=net.utilities.bilinear_initializer)(self.ops_map["main_head"])
 
         self.ops_map["main_head"] = tf.keras.layers.Cropping2D(cropping=((1, 1), (1, 1)))(self.ops_map["main_head"])
         self.ops_map["main_head"] = tf.Variable(0.01, dtype=tf.float32) * self.ops_map["main_head"]
 
         self.ops_map["block3_head"] = tf.keras.layers.Conv2D(
-            categories_count, kernel_size=(3, 3), activation=tf.nn.swish, padding="same")(self.ops_map["block3_pool"])
+            64, kernel_size=(3, 3), activation=tf.nn.swish, padding="same")(self.ops_map["block3_pool"])
 
         self.ops_map["main_head"] = self.ops_map["main_head"] + self.ops_map["block3_head"]
 
         self.ops_map["main_head"] = tf.keras.layers.Conv2D(
-            categories_count, kernel_size=(1, 1), activation=tf.nn.swish, padding="same")(self.ops_map["main_head"])
+            64, kernel_size=(1, 1), activation=tf.nn.swish, padding="same")(self.ops_map["main_head"])
 
         self.ops_map["main_head"] = tf.keras.layers.Conv2DTranspose(
             categories_count, kernel_size=(16, 16), strides=(8, 8), activation=tf.nn.swish,
@@ -95,7 +95,7 @@ class Model:
         self.learning_rate = None
 
         self.ops = {
-            "labels_placeholder": tf.placeholder(dtype=np.float32, shape=[1, None, None, self.categories_count]),
+            "labels_placeholder": tf.placeholder(dtype=np.float32, shape=[None, None, None, self.categories_count]),
             "learning_rate_placeholder": tf.placeholder(shape=[], dtype=tf.float32)
         }
 
@@ -131,8 +131,10 @@ class Model:
 
             epoch_log = {
                 "epoch_index": epoch_index,
-                "training_loss": self._train_for_one_epoch(training_data_generator_factory),
-                "validation_loss": self._get_validation_loss(validation_data_generator_factory)
+                "training_loss": self._train_for_one_epoch(
+                    training_data_generator_factory, configuration["batch_size"]),
+                "validation_loss": self._get_validation_loss(
+                    validation_data_generator_factory, configuration["batch_size"])
             }
 
             print(epoch_log)
@@ -141,6 +143,9 @@ class Model:
                 callback.on_epoch_end(epoch_log)
 
             epoch_index += 1
+
+        training_data_generator_factory.stop_generator()
+        validation_data_generator_factory.stop_generator()
 
     def predict(self, image):
         """
@@ -155,39 +160,40 @@ class Model:
 
         return self.session.run(self.network.ops_map["predictions"], feed_dictionary)[0]
 
-    def _train_for_one_epoch(self, training_data_generator_factory):
+    def _train_for_one_epoch(self, training_data_generator_factory, batch_size):
 
         training_data_generator = training_data_generator_factory.get_generator()
 
         training_losses = []
 
-        for _ in tqdm.tqdm(range(training_data_generator_factory.get_size())):
+        for _ in tqdm.tqdm(range(training_data_generator_factory.get_size() // batch_size)):
 
-            image, segmentation_cube = next(training_data_generator)
+            images_batch, segmentation_cubes_batch = next(training_data_generator)
 
             feed_dictionary = {
-                self.network.input_placeholder: np.array([image]),
-                self.ops["labels_placeholder"]: np.array([segmentation_cube], dtype=np.float32),
+                self.network.input_placeholder: images_batch,
+                self.ops["labels_placeholder"]: segmentation_cubes_batch,
                 self.ops["learning_rate_placeholder"]: self.learning_rate
             }
 
             _, loss = self.session.run([self.ops["train_op"], self.ops["loss_op"]], feed_dictionary)
+
             training_losses.append(loss)
 
         return np.mean(training_losses)
 
-    def _get_validation_loss(self, validation_data_generator_factory):
+    def _get_validation_loss(self, validation_data_generator_factory, batch_size):
 
         validation_data_generator = validation_data_generator_factory.get_generator()
         validation_losses = []
 
-        for _ in tqdm.tqdm(range(validation_data_generator_factory.get_size())):
+        for _ in tqdm.tqdm(range(validation_data_generator_factory.get_size() // batch_size)):
 
-            image, segmentation_cube = next(validation_data_generator)
+            images_batch, segmentation_cubes_batch = next(validation_data_generator)
 
             feed_dictionary = {
-                self.network.input_placeholder: np.array([image]),
-                self.ops["labels_placeholder"]: np.array([segmentation_cube], dtype=np.float32),
+                self.network.input_placeholder: images_batch,
+                self.ops["labels_placeholder"]: segmentation_cubes_batch
             }
 
             loss = self.session.run(self.ops["loss_op"], feed_dictionary)
