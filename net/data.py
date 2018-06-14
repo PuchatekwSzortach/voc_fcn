@@ -6,6 +6,8 @@ import os
 import random
 import copy
 import collections
+import threading
+import queue
 
 import numpy as np
 import scipy.io
@@ -111,48 +113,10 @@ class VOCSamplesGeneratorFactory:
 
 class VOCOneHotEncodedSamplesGeneratorFactory:
     """
-    Factory class creating data batches generators that yield (image, segmentation cube) pairs
-    """
-
-    def __init__(self, voc_samples_generator_factory, indices_to_colors_map):
-        """
-        Constructor
-        :param voc_samples_generator_factory: factory that creates generator yielding (image, segmentation) tuples
-        from VOC dataset
-        :param indices_to_colors_map: dictionary mapping categories indices to colors
-        """
-
-        self.voc_samples_generator_factory = voc_samples_generator_factory
-        self.indices_to_colors_map = indices_to_colors_map
-
-    def get_generator(self):
-        """
-        Returns generator that yields (image_path, segmentation_image) pair on each yield
-
-        :return: generator
-        """
-
-        samples_generator = self.voc_samples_generator_factory.get_generator()
-
-        while True:
-
-            image, segmentation = next(samples_generator)
-
-            segmentation_cube = get_segmentation_cube(segmentation, self.indices_to_colors_map)
-            yield image, segmentation_cube
-
-    def get_size(self):
-        """
-        Gets size of dataset served by the generator
-        :return: int
-        """
-
-        return self.voc_samples_generator_factory.get_size()
-
-
-class VOCOneHotEncodedSamplesGeneratorFactoryTwo:
-    """
-    Factory class creating data batches generators that yield (image, segmentation cube) pairs
+    Factory class creating data batches generators that yield (images batch, segmentation cubes batch) pairs.
+    Uses a queue internally to perform data loading and processing in a separate thread.
+    This speeds up overall training, but requires you to explicitly close the generator thread once you're done
+    using it.
     """
 
     def __init__(self, voc_samples_generator_factory, indices_to_colors_map, batch_size):
@@ -168,6 +132,10 @@ class VOCOneHotEncodedSamplesGeneratorFactoryTwo:
         self.indices_to_colors_map = indices_to_colors_map
         self.batch_size = batch_size
 
+        self._batches_queue = queue.Queue(maxsize=100)
+        self._batch_generation_thread = None
+        self._continue_serving_batches = None
+
     def get_generator(self):
         """
         Returns generator that yields (image_path, segmentation_image) pair on each yield
@@ -177,10 +145,47 @@ class VOCOneHotEncodedSamplesGeneratorFactoryTwo:
 
         samples_generator = self.voc_samples_generator_factory.get_generator()
 
+        self._continue_serving_batches = True
+
+        self._batch_generation_thread = threading.Thread(
+            target=self._batch_generation_task, args=(samples_generator, self._batches_queue))
+
+        self._batch_generation_thread.start()
+
+        while True:
+
+            batch = self._batches_queue.get()
+            self._batches_queue.task_done()
+            yield batch
+
+    def get_size(self):
+        """
+        Gets size of dataset served by the generator
+        :return: int
+        """
+
+        return self.voc_samples_generator_factory.get_size()
+
+    def stop_generator(self):
+        """
+        Signal data loading thread to finish working and purge the data queue.
+        """
+
+        self._continue_serving_batches = False
+
+        while not self._batches_queue.empty():
+            self._batches_queue.get()
+            self._batches_queue.task_done()
+
+        self._batches_queue.join()
+        self._batch_generation_thread.join()
+
+    def _batch_generation_task(self, samples_generator, batches_queue):
+
         images_batches_map = collections.defaultdict(list)
         segmentations_cubes_batches_map = collections.defaultdict(list)
 
-        while True:
+        while self._continue_serving_batches is True:
 
             image, segmentation = next(samples_generator)
             segmentation_cube = get_segmentation_cube(segmentation, self.indices_to_colors_map)
@@ -190,18 +195,13 @@ class VOCOneHotEncodedSamplesGeneratorFactoryTwo:
 
             if len(images_batches_map[image.shape]) == self.batch_size:
 
-                yield np.array(images_batches_map[image.shape]), np.array(segmentations_cubes_batches_map[image.shape])
+                batch = np.array(images_batches_map[image.shape]), \
+                        np.array(segmentations_cubes_batches_map[image.shape])
+
+                batches_queue.put(batch)
 
                 images_batches_map[image.shape].clear()
                 segmentations_cubes_batches_map[image.shape].clear()
-
-    def get_size(self):
-        """
-        Gets size of dataset served by the generator
-        :return: int
-        """
-
-        return self.voc_samples_generator_factory.get_size()
 
 
 def get_colors_info(categories_count):

@@ -144,6 +144,9 @@ class Model:
 
             epoch_index += 1
 
+        training_data_generator_factory.stop_generator()
+        validation_data_generator_factory.stop_generator()
+
     def predict(self, image):
         """
         Computes prediction on a single image

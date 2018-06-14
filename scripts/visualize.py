@@ -4,6 +4,7 @@ Module for visualization of data generators outputs, model prediction, etc
 
 import argparse
 import sys
+import time
 
 import yaml
 import vlogging
@@ -67,16 +68,20 @@ def log_one_hot_encoded_voc_samples_generator_output(logger, configuration):
         configuration["size_factor"], use_augmentation=False)
 
     generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactory(
-        data_segmentation_samples_generator_factory, indices_to_colors_map)
+        data_segmentation_samples_generator_factory, indices_to_colors_map, batch_size=1)
 
     generator = generator_factory.get_generator()
 
     for _ in tqdm.tqdm(range(40)):
 
-        image, segmentation_cube = next(generator)
-        segmentation_image = net.data.get_segmentation_image(segmentation_cube, indices_to_colors_map, void_color)
+        images_batch, segmentation_cubes_batch = next(generator)
 
-        logger.info(vlogging.VisualRecord("Data", [image, segmentation_image]))
+        for image, segmentation_cube in zip(images_batch, segmentation_cubes_batch):
+
+            segmentation_image = net.data.get_segmentation_image(segmentation_cube, indices_to_colors_map, void_color)
+            logger.info(vlogging.VisualRecord("Data", [image, segmentation_image]))
+
+    generator_factory.stop_generator()
 
 
 def log_trained_model_predictions(logger, configuration):
@@ -126,8 +131,8 @@ def main():
 
     logger = net.utilities.get_logger(config["log_path"])
 
-    log_voc_samples_generator_output(logger, config)
-    # log_one_hot_encoded_voc_samples_generator_output(logger, config)
+    # log_voc_samples_generator_output(logger, config)
+    log_one_hot_encoded_voc_samples_generator_output(logger, config)
     # log_trained_model_predictions(logger, config)
 
 
