@@ -4,7 +4,6 @@ Module for visualization of data generators outputs, model prediction, etc
 
 import argparse
 import sys
-import time
 
 import yaml
 import vlogging
