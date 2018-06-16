@@ -23,7 +23,7 @@ def get_data_generators_factories(config):
 
     categories = config["categories"]
 
-    indices_to_colors_map, _ = net.data.get_colors_info(len(categories))
+    indices_to_colors_map, void_color = net.data.get_colors_info(len(categories))
 
     voc_train_config = {
         "data_directory": config["voc"]["data_directory"],
@@ -37,17 +37,18 @@ def get_data_generators_factories(config):
 
     training_data_segmentation_samples_generator_factory = net.data.CombinedPASCALDatasetsGeneratorFactory(
         voc_train_config, hariharan_train_config, config["size_factor"],
-        len(config["categories"]), use_augmentation=True)
+        len(config["categories"]))
 
     training_data_generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactory(
-        training_data_segmentation_samples_generator_factory, indices_to_colors_map, config["train"]["batch_size"])
+        training_data_segmentation_samples_generator_factory, indices_to_colors_map, void_color,
+        config["train"]["batch_size"], use_augmentation=True)
 
     validation_data_segmentation_samples_generator_factory = net.data.VOCSamplesGeneratorFactory(
-        config["voc"]["data_directory"], config["voc"]["validation_set_path"], config["size_factor"],
-        use_augmentation=False)
+        config["voc"]["data_directory"], config["voc"]["validation_set_path"], config["size_factor"])
 
     validation_data_generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactory(
-        validation_data_segmentation_samples_generator_factory, indices_to_colors_map, config["train"]["batch_size"])
+        validation_data_segmentation_samples_generator_factory, indices_to_colors_map, void_color,
+        config["train"]["batch_size"], use_augmentation=False)
 
     return training_data_generator_factory, validation_data_generator_factory
 

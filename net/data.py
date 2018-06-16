@@ -56,21 +56,18 @@ class VOCSamplesGeneratorFactory:
     Factory class creating data batches generators that yield (image, segmentation image) pairs
     """
 
-    def __init__(self, data_directory, data_set_path, size_factor, use_augmentation):
+    def __init__(self, data_directory, data_set_path, size_factor):
         """
         Constructor
         :param data_directory: directory with VOC data
         :param data_set_path: path to list of filenames to be read from from data directory
         :param size_factor: int, value by which height and with of outputs must be divisible
-        :param use_augmentation: bool, triggers data augmentation
         """
 
         self.images_paths_and_segmentations_paths_tuples = \
             get_images_paths_and_segmentations_paths_tuples(data_directory, data_set_path)
 
         self.size_factor = size_factor
-
-        self.use_augmentation = use_augmentation
 
     def get_generator(self):
         """
@@ -97,10 +94,6 @@ class VOCSamplesGeneratorFactory:
                 image = cv2.resize(image, target_size, interpolation=cv2.INTER_CUBIC)
                 segmentation = cv2.resize(segmentation, target_size, interpolation=cv2.INTER_NEAREST)
 
-                if self.use_augmentation:
-
-                    image, segmentation = net.utilities.DataAugmenter.augment_samples(image, segmentation)
-
                 yield image, segmentation
 
     def get_size(self):
@@ -119,18 +112,25 @@ class VOCOneHotEncodedSamplesGeneratorFactory:
     using it.
     """
 
-    def __init__(self, voc_samples_generator_factory, indices_to_colors_map, batch_size):
+    def __init__(self, voc_samples_generator_factory, indices_to_colors_map, void_color, batch_size, use_augmentation):
         """
         Constructor
         :param voc_samples_generator_factory: factory that creates generator yielding (image, segmentation) tuples
         from VOC dataset
         :param indices_to_colors_map: dictionary mapping categories indices to colors
+        :param void_color: 3-elements tuple of ints, specifies color of pixels without a category
         :param batch_size: int, specifies size of batches yielded by generator
+        :param use_augmentation: bool, triggers data augmentation
         """
 
         self.voc_samples_generator_factory = voc_samples_generator_factory
-        self.indices_to_colors_map = indices_to_colors_map
-        self.batch_size = batch_size
+
+        self.batch_generations_args_map = {
+            "indices_to_colors_map": indices_to_colors_map,
+            "void_color": void_color,
+            "use_augmentation": use_augmentation,
+            "batch_size": batch_size
+        }
 
         self._batches_queue = queue.Queue(maxsize=100)
         self._batch_generation_thread = None
@@ -148,7 +148,8 @@ class VOCOneHotEncodedSamplesGeneratorFactory:
         self._continue_serving_batches = True
 
         self._batch_generation_thread = threading.Thread(
-            target=self._batch_generation_task, args=(samples_generator, self._batches_queue))
+            target=self._batch_generation_task,
+            args=(self.batch_generations_args_map, samples_generator, self._batches_queue))
 
         self._batch_generation_thread.start()
 
@@ -180,7 +181,7 @@ class VOCOneHotEncodedSamplesGeneratorFactory:
         self._batches_queue.join()
         self._batch_generation_thread.join()
 
-    def _batch_generation_task(self, samples_generator, batches_queue):
+    def _batch_generation_task(self, batch_generations_args_map, samples_generator, batches_queue):
 
         images_batches_map = collections.defaultdict(list)
         segmentations_cubes_batches_map = collections.defaultdict(list)
@@ -188,12 +189,18 @@ class VOCOneHotEncodedSamplesGeneratorFactory:
         while self._continue_serving_batches is True:
 
             image, segmentation = next(samples_generator)
-            segmentation_cube = get_segmentation_cube(segmentation, self.indices_to_colors_map)
+
+            if batch_generations_args_map["use_augmentation"]:
+                image, segmentation = net.utilities.DataAugmenter.augment_samples(
+                    image, segmentation, batch_generations_args_map["void_color"])
+
+            segmentation_cube = get_segmentation_cube(
+                segmentation, batch_generations_args_map["indices_to_colors_map"])
 
             images_batches_map[image.shape].append(image)
             segmentations_cubes_batches_map[image.shape].append(segmentation_cube)
 
-            if len(images_batches_map[image.shape]) == self.batch_size:
+            if len(images_batches_map[image.shape]) == batch_generations_args_map["batch_size"]:
 
                 batch = np.array(images_batches_map[image.shape]), \
                         np.array(segmentations_cubes_batches_map[image.shape])
@@ -310,20 +317,18 @@ class CombinedPASCALDatasetsGeneratorFactory:
     Builds a generator for that returns (image, segmentation) tuples.
     """
 
-    def __init__(self, voc_config, hariharan_config, size_factor, categories_count, use_augmentation):
+    def __init__(self, voc_config, hariharan_config, size_factor, categories_count):
         """
         Constructor
         :param voc_config: dictionary with voc dataset paths
         :param hariharan_config: dictionary with Hariharan's PASCAL dataset paths
         :param size_factor: int, value by which height and with of outputs must be divisible
         :param categories_count: int, number of categories in the datasets
-        :param use_augmentation: bool, controls data augmentation
         """
 
         self.voc_config = voc_config
         self.hariharan_config = hariharan_config
         self.size_factor = size_factor
-        self.use_augmentation = use_augmentation
 
         self.indices_to_colors_map, self.void_color = get_colors_info(categories_count)
         self.combined_datasets_filenames = self._get_combined_datasets_filenames()
@@ -354,10 +359,6 @@ class CombinedPASCALDatasetsGeneratorFactory:
 
                 image = cv2.resize(image, target_size, interpolation=cv2.INTER_CUBIC)
                 segmentation = cv2.resize(segmentation, target_size, interpolation=cv2.INTER_NEAREST)
-
-                if self.use_augmentation:
-
-                    image, segmentation = net.utilities.DataAugmenter.augment_samples(image, segmentation)
 
                 yield image, segmentation
 
