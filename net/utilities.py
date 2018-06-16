@@ -132,15 +132,42 @@ def get_categories_segmentations_maps(segmentation_cube, ids_to_categories_map):
     return categories_segmentations_map
 
 
+def get_uint8_images(images):
+    """
+    Converts a list of float images to uint8, making sure to scale up their brighness.
+    :param images: list of numpy arrays
+    :return: list of numpy arrays
+    """
+
+    brightness_adjusted_images = [255 * image for image in images]
+    return [image.astype(np.uint8) for image in brightness_adjusted_images]
+
+
 class DataAugmenter:
     """
     Simple class for data augmentation
     """
 
     @staticmethod
-    def augment_samples(image, segmentation):
+    def augment_samples(image, segmentation, void_color):
         """
         Performs random augmentations on copies of inputs and returns them
+        :param image: numpy array
+        :param segmentation: numpy array
+        :param void_color: three elements tuple, specifies color of pixels without a category
+        :return: tuple (augmented image, augmented segmentation)
+        """
+
+        image, segmentation = DataAugmenter.flip_samples(image, segmentation)
+        image = DataAugmenter.change_brightness(image)
+        image, segmentation = DataAugmenter.rotate_samples(image, segmentation, void_color)
+
+        return image, segmentation
+
+    @staticmethod
+    def flip_samples(image, segmentation):
+        """
+        Randomly flips samples around vertical axis
         :param image: numpy array
         :param segmentation: numpy array
         :return: tuple (augmented image, augmented segmentation)
@@ -148,6 +175,7 @@ class DataAugmenter:
 
         # Random flip around vertical axis
         if random.randint(0, 1) == 1:
+
             image = cv2.flip(image, flipCode=1)
             segmentation = cv2.flip(segmentation, flipCode=1)
 
@@ -170,10 +198,10 @@ class DataAugmenter:
         x = random.randint(int(0.25 * width), int(0.75 * width))
         y = random.randint(int(0.25 * height), int(0.75 * height))
 
-        angle = random.randint(-15, 15)
+        # angle = random.randint(-15, 15)
+        angle = random.randint(-20, 20)
 
         rotation_matrix = cv2.getRotationMatrix2D((x, y), angle, scale=1)
-
         augmented_image = cv2.warpAffine(image, rotation_matrix, (width, height), flags=cv2.INTER_NEAREST)
 
         # We need to convert channel values from np.int64 to int to make OpenCV happy
@@ -185,13 +213,66 @@ class DataAugmenter:
 
         return augmented_image, augmented_segmentation
 
+    @staticmethod
+    def change_brightness(image):
+        """
+        Randomly changes image
+        :param image: numpy array
+        :return: numpy array
+        """
 
-def get_uint8_images(images):
+        augmented_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV_FULL)
+
+        augmented_image = augmented_image.astype(np.float32)
+
+        hue_shift = np.random.randint(-10, 10)
+        saturation_shift = np.random.randint(-30, 30)
+        value_shift = np.random.randint(-30, 30)
+
+        random_shift = [hue_shift, saturation_shift, value_shift]
+
+        augmented_image = augmented_image + random_shift
+
+        augmented_image = np.clip(augmented_image, 0, 255).astype(np.uint8)
+        return cv2.cvtColor(augmented_image, cv2.COLOR_HSV2BGR_FULL)
+
+
+def get_intersection_over_union(first_segmentation, second_segmentation):
     """
-    Converts a list of float images to uint8, making sure to scale up their brighness.
-    :param images: list of numpy arrays
-    :return: list of numpy arrays
+    Computes intersection over union (IoU) between two segmentation maps.
+    Maps are binary - that is their values are 0s and 1s only.
+    IoU is computed between non-zero elements of both segmentation maps.
+    :param first_segmentation: 2D numpy array
+    :param second_segmentation: 2D numpy array
+    :return: float
     """
 
-    brightness_adjusted_images = [255 * image for image in images]
-    return [image.astype(np.uint8) for image in brightness_adjusted_images]
+    union = np.logical_or(first_segmentation, second_segmentation)
+    intersection = np.logical_and(first_segmentation, second_segmentation)
+
+    return np.sum(intersection) / np.sum(union)
+
+
+def get_segmentation_overlaid_image(image, segmentation, colors_to_ignore):
+    """
+    Return an image with segmentation mask overlaid over it.
+    :param image: numpy array
+    :param segmentation: numpy array
+    :param colors_to_ignore: list of 3-elements tuples - segmentation colors that should be ignored when computing
+    overlaid image
+    :return: numpy array
+    """
+
+    segmentation_colors = get_image_colors(segmentation)
+
+    overlay_colors = segmentation_colors.difference(colors_to_ignore)
+
+    overlay_image = image.copy()
+    blended_image = cv2.addWeighted(image, 0.5, segmentation, 0.5, 0)
+
+    for color in overlay_colors:
+
+        mask = np.all(segmentation == color, axis=2)
+        overlay_image[mask] = blended_image[mask]
+
+    return overlay_image

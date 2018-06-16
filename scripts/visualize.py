@@ -31,17 +31,15 @@ def log_voc_samples_generator_output(logger, config):
     }
 
     generator = net.data.CombinedPASCALDatasetsGeneratorFactory(
-        voc_config, hariharan_config, config["size_factor"],
-        len(config["categories"]), use_augmentation=True).get_generator()
+        voc_config, hariharan_config, config["size_factor"], len(config["categories"])).get_generator()
 
     ids_to_colors_map, void_color = net.data.get_colors_info(len(config["categories"]))
     ids_to_categories_map = net.utilities.get_ids_to_values_map(config["categories"])
 
-    for _ in tqdm.tqdm(range(40)):
+    for _ in tqdm.tqdm(range(20)):
 
         image, segmentation = next(generator)
-
-        image, segmentation = net.utilities.DataAugmenter.rotate_samples(image, segmentation, void_color)
+        image, segmentation = net.utilities.DataAugmenter.augment_samples(image, segmentation, void_color)
 
         segmentation_cube = net.data.get_segmentation_cube(segmentation, ids_to_colors_map)
 
@@ -55,6 +53,30 @@ def log_voc_samples_generator_output(logger, config):
         logger.info(vlogging.VisualRecord("Data", images_to_display, footnotes=str(["void"] + list(categories))))
 
 
+def log_voc_samples_generator_output_overlays(logger, config):
+    """
+    Logs voc samples generator, overlaying non-background segmentations over original image
+    """
+
+    indices_to_colors_map, void_color = net.data.get_colors_info(len(config["categories"]))
+    color_to_ignore = [void_color, indices_to_colors_map[0]]
+
+    data_segmentation_samples_generator_factory = net.data.VOCSamplesGeneratorFactory(
+        config["voc"]["data_directory"], config["voc"]["validation_set_path"],
+        config["size_factor"])
+
+    generator = data_segmentation_samples_generator_factory.get_generator()
+
+    for _ in tqdm.tqdm(range(10)):
+
+        image, segmentation = next(generator)
+
+        segmentation_overlaid_image = net.utilities.get_segmentation_overlaid_image(
+            image, segmentation, color_to_ignore)
+
+        logger.info(vlogging.VisualRecord("Data", [image, segmentation, segmentation_overlaid_image]))
+
+
 def log_one_hot_encoded_voc_samples_generator_output(logger, configuration):
     """
     Logs one hot encoded voc samples generator output
@@ -64,10 +86,11 @@ def log_one_hot_encoded_voc_samples_generator_output(logger, configuration):
 
     data_segmentation_samples_generator_factory = net.data.VOCSamplesGeneratorFactory(
         configuration["voc"]["data_directory"], configuration["voc"]["validation_set_path"],
-        configuration["size_factor"], use_augmentation=False)
+        configuration["size_factor"])
 
     generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactory(
-        data_segmentation_samples_generator_factory, indices_to_colors_map, batch_size=1)
+        data_segmentation_samples_generator_factory, indices_to_colors_map, void_color,
+        batch_size=1, use_augmentation=True)
 
     generator = generator_factory.get_generator()
 
@@ -98,8 +121,8 @@ def log_trained_model_predictions(logger, configuration):
     model.load(configuration["model_checkpoint_path"])
 
     generator_factory = net.data.VOCSamplesGeneratorFactory(
-        configuration["voc"]["data_directory"], configuration["voc"]["validation_set_path"],
-        configuration["size_factor"], use_augmentation=False)
+        configuration["voc"]["data_directory"],
+        configuration["voc"]["validation_set_path"], configuration["size_factor"])
 
     generator = generator_factory.get_generator()
 
@@ -131,8 +154,9 @@ def main():
     logger = net.utilities.get_logger(config["log_path"])
 
     # log_voc_samples_generator_output(logger, config)
-    log_one_hot_encoded_voc_samples_generator_output(logger, config)
-    # log_trained_model_predictions(logger, config)
+    # log_voc_samples_generator_output_overlays(logger, config)
+    # log_one_hot_encoded_voc_samples_generator_output(logger, config)
+    log_trained_model_predictions(logger, config)
 
 
 if __name__ == "__main__":
