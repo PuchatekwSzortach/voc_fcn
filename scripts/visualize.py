@@ -13,6 +13,7 @@ import tensorflow as tf
 import net.utilities
 import net.data
 import net.ml
+import net.logging
 
 
 def log_voc_samples_generator_output(logger, config):
@@ -59,7 +60,7 @@ def log_voc_samples_generator_output_overlays(logger, config):
     """
 
     indices_to_colors_map, void_color = net.data.get_colors_info(len(config["categories"]))
-    color_to_ignore = [void_color, indices_to_colors_map[0]]
+    colors_to_ignore = [void_color, indices_to_colors_map[0]]
 
     data_segmentation_samples_generator_factory = net.data.VOCSamplesGeneratorFactory(
         config["voc"]["data_directory"], config["voc"]["validation_set_path"],
@@ -72,7 +73,7 @@ def log_voc_samples_generator_output_overlays(logger, config):
         image, segmentation = next(generator)
 
         segmentation_overlaid_image = net.utilities.get_segmentation_overlaid_image(
-            image, segmentation, color_to_ignore)
+            image, segmentation, colors_to_ignore)
 
         logger.info(vlogging.VisualRecord("Data", [image, segmentation, segmentation_overlaid_image]))
 
@@ -112,6 +113,7 @@ def log_trained_model_predictions(logger, configuration):
     """
 
     indices_to_colors_map, void_color = net.data.get_colors_info(len(configuration["categories"]))
+    colors_to_ignore = [void_color, indices_to_colors_map[0]]
 
     network = net.ml.FullyConvolutionalNetwork(categories_count=len(configuration["categories"]))
 
@@ -126,16 +128,12 @@ def log_trained_model_predictions(logger, configuration):
 
     generator = generator_factory.get_generator()
 
-    for _ in tqdm.tqdm(range(40)):
+    for _ in tqdm.tqdm(range(20)):
 
         image, segmentation_image = next(generator)
 
-        predicted_segmentation_cube = model.predict(image)
-
-        predicted_segmentation_image = net.data.get_segmentation_image(
-            predicted_segmentation_cube, indices_to_colors_map, void_color)
-
-        logger.info(vlogging.VisualRecord("Data", [image, segmentation_image, predicted_segmentation_image]))
+        net.logging.log_model_analysis(
+            logger, image, segmentation_image, model, indices_to_colors_map, void_color, colors_to_ignore)
 
 
 def main():
