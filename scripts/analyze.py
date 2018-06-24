@@ -33,9 +33,10 @@ def report_iou_results(categories_intersections_counts_map, categories_unions_co
         category_intersections_counts = categories_intersections_counts_map[category]
         category_unions_counts = categories_unions_counts_map[category]
 
-        categories_means = np.sum(category_intersections_counts) / np.sum(category_unions_counts)
+        category_mean = np.sum(category_intersections_counts) / np.sum(category_unions_counts)
+        print("{} mean iou -> {:.5f}".format(category, category_mean))
 
-        print("{} mean iou -> {:.5f}".format(category, categories_means))
+        categories_means.append(category_mean)
 
     print("\nMean iou across all categories: {:.5f}".format(np.mean(categories_means)))
 

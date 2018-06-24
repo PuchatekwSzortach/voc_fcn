@@ -72,7 +72,6 @@ class FullyConvolutionalNetwork:
             kernel_initializer=net.utilities.bilinear_initializer)(self.ops_map["main_head"])
 
         self.ops_map["logits"] = tf.keras.layers.Cropping2D(cropping=((4, 4), (4, 4)))(self.ops_map["main_head"])
-
         self.ops_map["predictions"] = tf.nn.softmax(self.ops_map["logits"], axis=-1)
 
 
