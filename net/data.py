@@ -132,7 +132,7 @@ class VOCOneHotEncodedSamplesGeneratorFactory:
             "batch_size": batch_size
         }
 
-        self._batches_queue = queue.Queue(maxsize=50)
+        self._batches_queue = queue.Queue(maxsize=100)
         self._batch_generation_thread = None
         self._continue_serving_batches = None
 

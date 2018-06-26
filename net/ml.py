@@ -57,7 +57,7 @@ class FullyConvolutionalNetwork:
             kernel_initializer=net.utilities.bilinear_initializer)(self.ops_map["main_head"])
 
         self.ops_map["main_head"] = tf.keras.layers.Cropping2D(cropping=((1, 1), (1, 1)))(self.ops_map["main_head"])
-        self.ops_map["main_head"] = tf.Variable(0.01, dtype=tf.float32) * self.ops_map["main_head"]
+        self.ops_map["main_head"] = tf.Variable(0.1, dtype=tf.float32) * self.ops_map["main_head"]
 
         self.ops_map["block3_head"] = tf.keras.layers.Conv2D(
             filters_count, kernel_size=(3, 3), activation=tf.nn.swish, padding="same")(self.ops_map["block3_pool"])
@@ -96,12 +96,12 @@ class Model:
         self.learning_rate = None
 
         self.ops = {
-            "labels_placeholder": tf.placeholder(dtype=np.float32, shape=[None, None, None, self.categories_count]),
+            "labels_placeholder": tf.placeholder(dtype=tf.int32, shape=[None, None, None]),
             "learning_rate_placeholder": tf.placeholder(shape=[], dtype=tf.float32)
         }
 
-        self.ops["loss_op"] = tf.losses.softmax_cross_entropy(
-            onehot_labels=self.ops["labels_placeholder"], logits=self.network.ops_map["logits"])
+        self.ops["loss_op"] = tf.losses.sparse_softmax_cross_entropy(
+            labels=self.ops["labels_placeholder"], logits=self.network.ops_map["logits"])
 
         self.ops["train_op"] = tf.train.AdamOptimizer(
             self.ops["learning_rate_placeholder"]).minimize(self.ops["loss_op"])
@@ -173,7 +173,7 @@ class Model:
 
             feed_dictionary = {
                 self.network.input_placeholder: images_batch,
-                self.ops["labels_placeholder"]: segmentation_cubes_batch,
+                self.ops["labels_placeholder"]: np.argmax(segmentation_cubes_batch, axis=-1),
                 self.ops["learning_rate_placeholder"]: self.learning_rate
             }
 
@@ -194,7 +194,7 @@ class Model:
 
             feed_dictionary = {
                 self.network.input_placeholder: images_batch,
-                self.ops["labels_placeholder"]: segmentation_cubes_batch
+                self.ops["labels_placeholder"]: np.argmax(segmentation_cubes_batch, axis=-1)
             }
 
             loss = self.session.run(self.ops["loss_op"], feed_dictionary)
