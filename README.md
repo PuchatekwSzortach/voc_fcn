@@ -8,6 +8,7 @@ There are three main entry points in this project:
 - scripts/train.py - for training the model  
 - scripts/analysis.py - for checking model's performance  
 - scripts/visualize.py - contains a number of functions for visualizing dataset and predictions  
+
 All scripts require path to configuration file as argument. **configuration.yaml** provides a sample configuration, as described in **configuration** section.
 
 
