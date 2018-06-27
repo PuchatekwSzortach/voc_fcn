@@ -97,11 +97,13 @@ class Model:
 
         self.ops = {
             "labels_placeholder": tf.placeholder(dtype=tf.int32, shape=[None, None, None]),
+            "masks_placeholder": tf.placeholder(dtype=tf.int32, shape=[None, None, None]),
             "learning_rate_placeholder": tf.placeholder(shape=[], dtype=tf.float32)
         }
 
         self.ops["loss_op"] = tf.losses.sparse_softmax_cross_entropy(
-            labels=self.ops["labels_placeholder"], logits=self.network.ops_map["logits"])
+            labels=self.ops["labels_placeholder"], logits=self.network.ops_map["logits"],
+            weights=self.ops["masks_placeholder"])
 
         self.ops["train_op"] = tf.train.AdamOptimizer(
             self.ops["learning_rate_placeholder"]).minimize(self.ops["loss_op"])
@@ -169,11 +171,12 @@ class Model:
 
         for _ in tqdm.tqdm(range(training_data_generator_factory.get_size() // batch_size)):
 
-            images_batch, segmentation_cubes_batch = next(training_data_generator)
+            images_batch, segmentations_labels_batch, masks_batch = next(training_data_generator)
 
             feed_dictionary = {
                 self.network.input_placeholder: images_batch,
-                self.ops["labels_placeholder"]: np.argmax(segmentation_cubes_batch, axis=-1),
+                self.ops["labels_placeholder"]: segmentations_labels_batch,
+                self.ops["masks_placeholder"]: masks_batch,
                 self.ops["learning_rate_placeholder"]: self.learning_rate
             }
 
@@ -190,11 +193,12 @@ class Model:
 
         for _ in tqdm.tqdm(range(validation_data_generator_factory.get_size() // batch_size)):
 
-            images_batch, segmentation_cubes_batch = next(validation_data_generator)
+            images_batch, segmentations_labels_batch, masks_batch = next(validation_data_generator)
 
             feed_dictionary = {
                 self.network.input_placeholder: images_batch,
-                self.ops["labels_placeholder"]: np.argmax(segmentation_cubes_batch, axis=-1)
+                self.ops["labels_placeholder"]: segmentations_labels_batch,
+                self.ops["masks_placeholder"]: masks_batch,
             }
 
             loss = self.session.run(self.ops["loss_op"], feed_dictionary)
