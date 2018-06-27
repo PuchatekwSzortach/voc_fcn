@@ -211,6 +211,120 @@ class VOCOneHotEncodedSamplesGeneratorFactory:
                 segmentations_cubes_batches_map[image.shape].clear()
 
 
+class VOCSegmentationsLabelsSamplesGeneratorFactory:
+    """
+    Factory class creating data batches generators that yield (images batch, segmentations labels batch) pairs.
+    Uses a queue internally to perform data loading and processing in a separate thread.
+    This speeds up overall training, but requires you to explicitly close the generator thread once you're done
+    using it.
+    """
+
+    def __init__(self, voc_samples_generator_factory, indices_to_colors_map, void_color, batch_size, use_augmentation):
+        """
+        Constructor
+        :param voc_samples_generator_factory: factory that creates generator yielding (image, segmentation) tuples
+        from VOC dataset
+        :param indices_to_colors_map: dictionary mapping categories indices to colors
+        :param void_color: 3-elements tuple of ints, specifies color of pixels without a category
+        :param batch_size: int, specifies size of batches yielded by generator
+        :param use_augmentation: bool, triggers data augmentation
+        """
+
+        self.voc_samples_generator_factory = voc_samples_generator_factory
+
+        self.batch_generations_args_map = {
+            "indices_to_colors_map": indices_to_colors_map,
+            "void_color": void_color,
+            "use_augmentation": use_augmentation,
+            "batch_size": batch_size
+        }
+
+        self._batches_queue = queue.Queue(maxsize=100)
+        self._batch_generation_thread = None
+        self._continue_serving_batches = None
+
+    def get_generator(self):
+        """
+        Returns generator that yields (image_path, segmentation_image) pair on each yield
+
+        :return: generator
+        """
+
+        samples_generator = self.voc_samples_generator_factory.get_generator()
+
+        self._continue_serving_batches = True
+
+        self._batch_generation_thread = threading.Thread(
+            target=self._batch_generation_task,
+            args=(self.batch_generations_args_map, samples_generator, self._batches_queue))
+
+        self._batch_generation_thread.start()
+
+        while True:
+
+            batch = self._batches_queue.get()
+            self._batches_queue.task_done()
+            yield batch
+
+    def get_size(self):
+        """
+        Gets size of dataset served by the generator
+        :return: int
+        """
+
+        return self.voc_samples_generator_factory.get_size()
+
+    def stop_generator(self):
+        """
+        Signal data loading thread to finish working and purge the data queue.
+        """
+
+        self._continue_serving_batches = False
+
+        while not self._batches_queue.empty():
+            self._batches_queue.get()
+            self._batches_queue.task_done()
+
+        self._batches_queue.join()
+        self._batch_generation_thread.join()
+
+    def _batch_generation_task(self, batch_generations_args_map, samples_generator, batches_queue):
+
+        images_batches_map = collections.defaultdict(list)
+        segmentations_labels_batches_map = collections.defaultdict(list)
+        masks_batches_map = collections.defaultdict(list)
+
+        while self._continue_serving_batches is True:
+
+            image, segmentation = next(samples_generator)
+
+            if batch_generations_args_map["use_augmentation"]:
+                image, segmentation = net.utilities.DataAugmenter.augment_samples(
+                    image, segmentation, batch_generations_args_map["void_color"])
+
+            segmentations_labels_image = net.utilities.get_segmentation_labels_image(
+                segmentation, batch_generations_args_map["indices_to_colors_map"])
+
+            # Mask that lets us differentiate pixels with and without categories
+            mask = np.all(segmentation != batch_generations_args_map["void_color"], axis=2).astype(np.int32)
+
+            images_batches_map[image.shape].append(image)
+            segmentations_labels_batches_map[image.shape].append(segmentations_labels_image)
+            masks_batches_map[image.shape].append(mask)
+
+            if len(images_batches_map[image.shape]) == batch_generations_args_map["batch_size"]:
+
+                batch = np.array(images_batches_map[image.shape]), \
+                        np.array(segmentations_labels_batches_map[image.shape]), \
+                        np.array(masks_batches_map[image.shape])
+
+                batches_queue.put(batch)
+
+                images_batches_map[image.shape].clear()
+                segmentations_labels_batches_map[image.shape].clear()
+                masks_batches_map[image.shape].clear()
+
+
 def get_colors_info(categories_count):
     """
     Get ids to colors dictionary and void color.

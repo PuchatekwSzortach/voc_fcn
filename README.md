@@ -1,7 +1,7 @@
 # voc_fcn
-Fully Convolutional Network trained on Pascal Visual Object Classes dataset. 
-This work provides a tensorflow (version 1.8) implementation of "Fully Convolutional Networks for Semantic Segmentation" paper.   
-There are some differences between this implementation and original paper - model is not trained in stages, and dense layers from VGG model are not used.
+A Fully Convolutional Network implementation trained on Pascal Visual Object Classes dataset.
+
+This work provides a tensorflow (version 1.8) implementation of "Fully Convolutional Networks for Semantic Segmentation" paper. There are some differences between this implementation and original paper - model is not trained in stages, and dense layers from VGG model are not used.
 
 ## Entry points
 There are three main entry points in this project:  

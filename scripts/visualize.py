@@ -107,6 +107,35 @@ def log_one_hot_encoded_voc_samples_generator_output(logger, configuration):
     generator_factory.stop_generator()
 
 
+def log_segmentations_labels_voc_samples_generator_output(logger, configuration):
+    """
+    Logs one hot encoded voc samples generator output
+    """
+
+    indices_to_colors_map, void_color = net.data.get_colors_info(len(configuration["categories"]))
+
+    data_segmentation_samples_generator_factory = net.data.VOCSamplesGeneratorFactory(
+        configuration["voc"]["data_directory"], configuration["voc"]["validation_set_path"],
+        configuration["size_factor"])
+
+    generator_factory = net.data.VOCSegmentationsLabelsSamplesGeneratorFactory(
+        data_segmentation_samples_generator_factory, indices_to_colors_map, void_color,
+        batch_size=1, use_augmentation=True)
+
+    generator = generator_factory.get_generator()
+
+    for _ in tqdm.tqdm(range(10)):
+
+        images_batch, segmentation_labels_batch, masks_batch = next(generator)
+
+        for image, segmentation_labels_image, mask in zip(images_batch, segmentation_labels_batch, masks_batch):
+
+            segmentation_image = 5 * segmentation_labels_image
+            logger.info(vlogging.VisualRecord("Data", [image, segmentation_image, 255 * mask]))
+
+    generator_factory.stop_generator()
+
+
 def log_trained_model_predictions(logger, configuration):
     """
     Logs trained model's predictions
@@ -154,7 +183,8 @@ def main():
     # log_voc_samples_generator_output(logger, config)
     # log_voc_samples_generator_output_overlays(logger, config)
     # log_one_hot_encoded_voc_samples_generator_output(logger, config)
-    log_trained_model_predictions(logger, config)
+    log_segmentations_labels_voc_samples_generator_output(logger, config)
+    # log_trained_model_predictions(logger, config)
 
 
 if __name__ == "__main__":

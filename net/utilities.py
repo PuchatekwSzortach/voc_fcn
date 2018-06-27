@@ -276,3 +276,23 @@ def get_segmentation_overlaid_image(image, segmentation, colors_to_ignore):
         overlay_image[mask] = blended_image[mask]
 
     return overlay_image
+
+
+def get_segmentation_labels_image(segmentation_image, indices_to_colors_map):
+    """
+    Creates a segmentation labels image that translates segmentation color to index value.
+    For each pixel without a reference color provided in indices_to_colors_map value 0 is used.
+    :param segmentation_image: 3D array of segmentations
+    :param indices_to_colors_map: dictionary mapping segmentation categories to colors
+    :return: 2D numpy array with pixel values set to corresponding indices of segmentations categories.
+    Pixels with no category assigned have value 0.
+    """
+
+    segmentation_labels_image = np.zeros(segmentation_image.shape[:2])
+
+    for index, color in indices_to_colors_map.items():
+
+        color_pixels = np.all(segmentation_image == color, axis=2)
+        segmentation_labels_image[color_pixels] = index
+
+    return segmentation_labels_image
