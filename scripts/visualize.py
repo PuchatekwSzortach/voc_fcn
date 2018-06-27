@@ -78,35 +78,6 @@ def log_voc_samples_generator_output_overlays(logger, config):
         logger.info(vlogging.VisualRecord("Data", [image, segmentation, segmentation_overlaid_image]))
 
 
-def log_one_hot_encoded_voc_samples_generator_output(logger, configuration):
-    """
-    Logs one hot encoded voc samples generator output
-    """
-
-    indices_to_colors_map, void_color = net.data.get_colors_info(len(configuration["categories"]))
-
-    data_segmentation_samples_generator_factory = net.data.VOCSamplesGeneratorFactory(
-        configuration["voc"]["data_directory"], configuration["voc"]["validation_set_path"],
-        configuration["size_factor"])
-
-    generator_factory = net.data.VOCOneHotEncodedSamplesGeneratorFactory(
-        data_segmentation_samples_generator_factory, indices_to_colors_map, void_color,
-        batch_size=1, use_augmentation=True)
-
-    generator = generator_factory.get_generator()
-
-    for _ in tqdm.tqdm(range(40)):
-
-        images_batch, segmentation_cubes_batch = next(generator)
-
-        for image, segmentation_cube in zip(images_batch, segmentation_cubes_batch):
-
-            segmentation_image = net.data.get_segmentation_image(segmentation_cube, indices_to_colors_map, void_color)
-            logger.info(vlogging.VisualRecord("Data", [image, segmentation_image]))
-
-    generator_factory.stop_generator()
-
-
 def log_segmentations_labels_voc_samples_generator_output(logger, configuration):
     """
     Logs one hot encoded voc samples generator output
@@ -182,7 +153,6 @@ def main():
 
     # log_voc_samples_generator_output(logger, config)
     # log_voc_samples_generator_output_overlays(logger, config)
-    # log_one_hot_encoded_voc_samples_generator_output(logger, config)
     log_segmentations_labels_voc_samples_generator_output(logger, config)
     # log_trained_model_predictions(logger, config)
 
