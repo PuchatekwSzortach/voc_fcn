@@ -31,28 +31,28 @@ We present three sets of images to show some of the best results, average result
 #### Failures
 ![alt text](./images/bad.jpg)
 
-Mean intersection over union of the best trained model for the validation dataset was **0.429**, with performance on each category provided in table below.
+Mean intersection over union of the best trained model for the validation dataset was **0.447**, with performance on each category provided in table below.
 
 Category | Intersection over union
 --- | --- 
-aeroplane | 0.57915
-background | 0.85575
-bicycle | 0.19839
-bird | 0.43495
-boat | 0.26772
-bottle | 0.32754
-bus | 0.61916
-car | 0.57225
-cat | 0.59068
-chair | 0.15615
-cow | 0.28003
-diningtable | 0.27586
-dog | 0.49675
-horse | 0.37392
-motorbike | 0.50737
-person | 0.64846
-pottedplant | 0.25426
-sheep | 0.40522
-sofa | 0.26697
-train | 0.51445
-tvmonitor | 0.37658
+aeroplane | 0.58477
+background | 0.86000
+bicycle | 0.19416
+bird | 0.53809
+boat | 0.27445
+bottle | 0.36764
+bus | 0.62230
+car | 0.60776
+cat | 0.59874
+chair | 0.15179
+cow | 0.31397
+diningtable | 0.27226
+dog | 0.52583
+horse | 0.38766
+motorbike | 0.48593
+person | 0.66646
+pottedplant | 0.28333
+sheep | 0.45254
+sofa | 0.25164
+train | 0.53669
+tvmonitor | 0.41259
